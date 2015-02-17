@@ -14,9 +14,6 @@ import simplejson
 installed_things = dict((pkg.key, pkg) for pkg in pkg_resources.working_set)
 
 
-EXCLUDED = frozenset(('argparse',))
-
-
 def get_lines_from_file(filename):
     with io.open(filename) as requirements_file:
         return [
@@ -61,10 +58,7 @@ def find_unpinned_requirements(requirements):
         package_info = installed_things[requirement.key]
 
         for sub_requirement in package_info.requires(requirement.extras):
-            if (
-                    sub_requirement.key not in pinned_versions and
-                    sub_requirement.key not in EXCLUDED
-            ):
+            if sub_requirement.key not in pinned_versions:
                 unpinned.add(
                     (sub_requirement.project_name, requirement, filename)
                 )
@@ -115,8 +109,6 @@ def get_pinned_versions_from_requirement(requirement):
         req = requirements_to_parse.pop()
         installed_req = installed_things[req.key]
         for sub_requirement in installed_req.requires(req.extras):
-            if sub_requirement.key in EXCLUDED:
-                continue
             requirements_to_parse.append(sub_requirement)
             installed = installed_things[sub_requirement.key]
             expected_pinned.add(

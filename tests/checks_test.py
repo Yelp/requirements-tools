@@ -263,13 +263,6 @@ def test_get_pinned_versions_from_requirement():
     assert packages == ['mccabe', 'pep8', 'pyflakes']
 
 
-def test_get_pinned_versions_from_requirement_exclude_argparse():
-    # A requirement which depends on argparse
-    reqs = checks.get_pinned_versions_from_requirement('pre-commit')
-    matching_argparse = [x for x in reqs if 'argparse' in x]
-    assert matching_argparse == []
-
-
 def test_format_versions_on_lines_with_dashes_trivial():
     assert checks.format_versions_on_lines_with_dashes(()) == ''
 
