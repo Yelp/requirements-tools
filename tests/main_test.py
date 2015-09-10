@@ -81,11 +81,11 @@ def test_to_pinned_versions_uses_key():
 def test_unpinned_things():
     flake8req = pkg_resources.Requirement.parse('flake8==2.3.0')
     ret = main.find_unpinned_requirements(((flake8req, 'reqs.txt'),))
-    assert ret == set((
+    assert ret == {
         ('mccabe', flake8req, 'reqs.txt'),
         ('pep8', flake8req, 'reqs.txt'),
         ('pyflakes', flake8req, 'reqs.txt'),
-    ))
+    }
 
 
 def test_format_unpinned_requirements():
@@ -111,7 +111,7 @@ def mock_pinned_from_requirement_ab():
     with mock.patch.object(
         main,
         'get_pinned_versions_from_requirement',
-        return_value=set(('a==1', 'b==2')),
+        return_value={'a==1', 'b==2'},
     ):
         yield
 
@@ -121,7 +121,7 @@ def mock_pinned_from_requirement_abc():
     with mock.patch.object(
         main,
         'get_pinned_versions_from_requirement',
-        return_value=set(('a==1', 'b==2', 'c==3')),
+        return_value={'a==1', 'b==2', 'c==3'},
     ):
         yield
 
@@ -131,10 +131,10 @@ def mock_get_raw_requirements_ab():
     with mock.patch.object(
         main,
         'get_raw_requirements',
-        return_value=set((
+        return_value={
             (pkg_resources.Requirement.parse('a==1'), 'r.txt'),
             (pkg_resources.Requirement.parse('b==2'), 'r.txt'),
-        )),
+        },
     ):
         yield
 
@@ -144,11 +144,11 @@ def mock_get_raw_requirements_abc():
     with mock.patch.object(
         main,
         'get_raw_requirements',
-        return_value=set((
+        return_value={
             (pkg_resources.Requirement.parse('a==1'), 'r.txt'),
             (pkg_resources.Requirement.parse('b==2'), 'r.txt'),
             (pkg_resources.Requirement.parse('c==3'), 'r.txt'),
-        )),
+        },
     ):
         yield
 
@@ -256,7 +256,7 @@ def test_get_package_name():
 def test_get_pinned_versions_from_requirement():
     result = main.get_pinned_versions_from_requirement('flake8')
     # These are to make this not flaky in future when things change
-    assert type(result) is set
+    assert isinstance(result, set)
     result = sorted(result)
     split = [req.split('==') for req in result]
     packages = [package for package, _ in split]
