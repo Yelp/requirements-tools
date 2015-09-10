@@ -188,7 +188,7 @@ def test_test_setup_dependencies_too_much_pinned():
     'mock_pinned_from_requirement_ab', 'mock_get_raw_requirements_abc',
 )
 def test_test_dependencies_not_enough_pinned():
-    # So we don't skup
+    # So we don't skip
     write_file('setup.py', '')
     write_file('requirements.txt', '')
     with pytest.raises(AssertionError) as excinfo:

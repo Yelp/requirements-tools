@@ -13,7 +13,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
     ],
-    install_requires=['pytest', 'simplejson'],
+    install_requires=['pytest'],
     packages=find_packages('.', exclude=('tests*', 'testing*')),
     entry_points={
         'console_scripts': [

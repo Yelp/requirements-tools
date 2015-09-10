@@ -2,13 +2,13 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import io
+import json
 import os.path
 import subprocess
 import sys
 
 import pkg_resources
 import pytest
-import simplejson
 
 
 installed_things = {pkg.key: pkg for pkg in pkg_resources.working_set}
@@ -93,15 +93,9 @@ def test_requirements_pinned(requirements_files=('requirements.txt',)):
 
 
 def get_package_name():
-    proc = subprocess.Popen(
+    return subprocess.check_output(
         (sys.executable, 'setup.py', '--name'),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    stdout, stderr = proc.communicate()
-    stdout, stderr = stdout.decode('UTF-8'), stderr.decode('UTF-8')
-    assert proc.returncode == 0, (proc.returncode, stdout, stderr)
-    return stdout.strip()
+    ).decode('UTF-8').strip()
 
 
 def get_pinned_versions_from_requirement(requirement):
@@ -181,7 +175,7 @@ def test_no_underscores_all_dashes(requirements_files=('requirements.txt',)):
 def test_bower_package_versions():
     if not os.path.exists('bower.json'):  # pragma: no cover
         pytest.skip('No bower.json file')
-    bower_contents = simplejson.loads(io.open('bower.json').read())
+    bower_contents = json.loads(io.open('bower.json').read())
     for package_name, bower_version in bower_contents['dependencies'].items():
         # Normalize underscores to dashes
         package_name = package_name.replace('_', '-')
