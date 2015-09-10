@@ -11,7 +11,7 @@ import pytest
 import simplejson
 
 
-installed_things = dict((pkg.key, pkg) for pkg in pkg_resources.working_set)
+installed_things = {pkg.key: pkg for pkg in pkg_resources.working_set}
 
 
 def get_lines_from_file(filename):
@@ -31,18 +31,18 @@ def get_raw_requirements(filename):
 
 def to_version(requirement):
     if len(requirement.specs) != 1:
-        raise AssertionError('Expected one spec: {0!r}'.format(requirement))
+        raise AssertionError('Expected one spec: {!r}'.format(requirement))
     if requirement.specs[0][0] != '==':
-        raise AssertionError('Expected == spec: {0!r}'.format(requirement))
+        raise AssertionError('Expected == spec: {!r}'.format(requirement))
     return requirement.specs[0][1]
 
 
 def to_equality_str(requirement):
-    return '{0}=={1}'.format(requirement.key, to_version(requirement))
+    return '{}=={}'.format(requirement.key, to_version(requirement))
 
 
 def to_pinned_versions(requirements):
-    return dict((req.key, to_version(req)) for req, _ in requirements)
+    return {req.key: to_version(req) for req, _ in requirements}
 
 
 def find_unpinned_requirements(requirements):
@@ -67,7 +67,7 @@ def find_unpinned_requirements(requirements):
 
 def format_unpinned_requirements(unpinned_requirements):
     return '\t' + '\n\t'.join(
-        '{0} (required by {1} in {2})'.format(*req)
+        '{} (required by {} in {})'.format(*req)
         for req in sorted(unpinned_requirements)
     )
 
@@ -86,7 +86,7 @@ def test_requirements_pinned(requirements_files=('requirements.txt',)):
     unpinned_requirements = find_unpinned_requirements(raw_requirements)
     if unpinned_requirements:
         raise AssertionError(
-            'Unpinned requirements detected!\n\n{0}'.format(
+            'Unpinned requirements detected!\n\n{}'.format(
                 format_unpinned_requirements(unpinned_requirements),
             )
         )
@@ -115,13 +115,13 @@ def get_pinned_versions_from_requirement(requirement):
             requirements_to_parse.append(sub_requirement)
             installed = installed_things[sub_requirement.key]
             expected_pinned.add(
-                '{0}=={1}'.format(installed.key, installed.version)
+                '{}=={}'.format(installed.key, installed.version)
             )
     return expected_pinned
 
 
 def format_versions_on_lines_with_dashes(versions):
-    return '\n'.join('\t- {0}'.format(req) for req in sorted(versions))
+    return '\n'.join('\t- {}'.format(req) for req in sorted(versions))
 
 
 def test_setup_dependencies():
@@ -133,12 +133,12 @@ def test_setup_dependencies():
 
     package_name = get_package_name()
     expected_pinned = get_pinned_versions_from_requirement(package_name)
-    expected_pinned = set(
+    expected_pinned = {
         pkg_resources.Requirement.parse(s) for s in expected_pinned
-    )
-    requirements = set(
+    }
+    requirements = {
         req for req, _ in get_raw_requirements('requirements.txt')
-    )
+    }
     pinned_but_not_required = requirements - expected_pinned
     required_but_not_pinned = expected_pinned - requirements
     if pinned_but_not_required:
@@ -146,7 +146,7 @@ def test_setup_dependencies():
             'Requirements are pinned in requirements.txt but are not depended '
             'on in setup.py\n'
             '(Probably need to add something to setup.py):\n'
-            '{0}'.format(format_versions_on_lines_with_dashes(
+            '{}'.format(format_versions_on_lines_with_dashes(
                 pinned_but_not_required,
             ))
         )
@@ -155,7 +155,7 @@ def test_setup_dependencies():
             'Dependencies derived from setup.py are not pinned in '
             'requirements.txt\n'
             '(Probably need to add something to requirements.txt):\n'
-            '{0}'.format(format_versions_on_lines_with_dashes(
+            '{}'.format(format_versions_on_lines_with_dashes(
                 required_but_not_pinned,
             )),
         )
@@ -172,7 +172,7 @@ def test_no_underscores_all_dashes(requirements_files=('requirements.txt',)):
         for line in get_lines_from_file(requirement_file):
             if '_' in line:
                 raise AssertionError(
-                    'Use dashes for package names {0}: {1}'.format(
+                    'Use dashes for package names {}: {}'.format(
                         requirement_file, line,
                     )
                 )
@@ -190,15 +190,15 @@ def test_bower_package_versions():
             if python_version != bower_version:
                 raise AssertionError(
                     'Versions in python do not agree with bower versions:\n'
-                    'Package: {0}\n'
-                    'Bower: {1}\n'
-                    'Python: {2}'.format(
+                    'Package: {}\n'
+                    'Bower: {}\n'
+                    'Python: {}'.format(
                         package_name, bower_version, python_version,
                     )
                 )
 
 
-def main(argv=None):
+def main():  # pragma: no cover
     return pytest.main([__file__.replace('pyc', 'py')] + sys.argv[1:])
 
 
