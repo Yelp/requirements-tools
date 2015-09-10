@@ -8,7 +8,7 @@ import mock
 import pkg_resources
 import pytest
 
-from pytest_requirements_checks import checks
+from requirements_checks import checks
 
 
 def write_file(filename, contents):
@@ -306,7 +306,7 @@ def test_test_bower_package_versions_no_bower_versions():
 @pytest.mark.usefixtures('in_tmpdir')
 def test_test_bower_package_versions_matching():
     # Contrived, but let's assume flake8 is a bower package
-    write_file('bower.json', '{"dependencies": {"flake8": "2.3.0"}}')
+    write_file('bower.json', '{"dependencies": {"flake8": "2.4.1"}}')
     # Should not raise
     checks.test_bower_package_versions()
 
@@ -329,5 +329,5 @@ def test_test_bower_package_versions_not_matching():
         'Versions in python do not agree with bower versions:\n'
         'Package: flake8\n'
         'Bower: 0.0.0\n'
-        'Python: 2.3.0',
+        'Python: 2.4.1',
     )

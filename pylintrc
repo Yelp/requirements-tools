@@ -12,7 +12,7 @@ const-rgx=(([A-Za-z_][A-Za-z0-9_]*)|(__.*__))$
 max-line-length=131
 
 [TYPECHECK]
-ignored-classes=pytest,lxml.etree
+ignored-classes=pytest
 
 [DESIGN]
 min-public-methods=0

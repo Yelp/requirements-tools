@@ -73,7 +73,10 @@ def format_unpinned_requirements(unpinned_requirements):
 
 
 def test_requirements_pinned(requirements_files=('requirements.txt',)):
-    if all(not os.path.exists(reqfile) for reqfile in requirements_files):
+    if all(
+            not os.path.exists(reqfile)
+            for reqfile in requirements_files
+    ):  # pragma: no cover
         pytest.skip('No requirements files found')
 
     raw_requirements = sum(
@@ -125,7 +128,7 @@ def test_setup_dependencies():
     if (
             not os.path.exists('setup.py') or
             not os.path.exists('requirements.txt')
-    ):
+    ):  # pragma: no cover
         pytest.skip('No setup.py or requirements.txt')
 
     package_name = get_package_name()
@@ -159,7 +162,10 @@ def test_setup_dependencies():
 
 
 def test_no_underscores_all_dashes(requirements_files=('requirements.txt',)):
-    if all(not os.path.exists(reqfile) for reqfile in requirements_files):
+    if all(
+            not os.path.exists(reqfile)
+            for reqfile in requirements_files
+    ):  # pragma: no cover
         pytest.skip('No requirements files found')
 
     for requirement_file in requirements_files:
@@ -173,7 +179,7 @@ def test_no_underscores_all_dashes(requirements_files=('requirements.txt',)):
 
 
 def test_bower_package_versions():
-    if not os.path.exists('bower.json'):
+    if not os.path.exists('bower.json'):  # pragma: no cover
         pytest.skip('No bower.json file')
     bower_contents = simplejson.loads(io.open('bower.json').read())
     for package_name, bower_version in bower_contents['dependencies'].items():
@@ -190,3 +196,11 @@ def test_bower_package_versions():
                         package_name, bower_version, python_version,
                     )
                 )
+
+
+def main(argv=None):
+    return pytest.main([__file__.replace('pyc', 'py')] + sys.argv[1:])
+
+
+if __name__ == '__main__':
+    exit(main())
