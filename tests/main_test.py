@@ -196,7 +196,8 @@ def test_test_dependencies_not_enough_pinned():
     assert excinfo.value.args == (
         'Requirements are pinned in requirements.txt but are not depended '
         'on in setup.py\n'
-        '(Probably need to add something to setup.py):\n'
+        '(Probably need to add something to setup.py)\n'
+        '(or remove from requirements.txt):\n'
         '\t- c==3',
     )
 

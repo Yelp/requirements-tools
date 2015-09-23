@@ -139,7 +139,8 @@ def test_setup_dependencies():
         raise AssertionError(
             'Requirements are pinned in requirements.txt but are not depended '
             'on in setup.py\n'
-            '(Probably need to add something to setup.py):\n'
+            '(Probably need to add something to setup.py)\n'
+            '(or remove from requirements.txt):\n'
             '{}'.format(format_versions_on_lines_with_dashes(
                 pinned_but_not_required,
             ))
@@ -193,6 +194,8 @@ def test_bower_package_versions():
 
 
 def main():  # pragma: no cover
+    # Forces quiet output and overrides pytest.ini
+    os.environ['PYTEST_ADDOPTS'] = '-q'
     return pytest.main([__file__.replace('pyc', 'py')] + sys.argv[1:])
 
 
