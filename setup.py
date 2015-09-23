@@ -4,7 +4,7 @@ from setuptools import setup
 
 
 setup(
-    name='requirements_checks',
+    name='check_requirements',
     description='Console script to help with testing requirements.',
     version='0.0.0',
     classifiers=[
@@ -17,7 +17,7 @@ setup(
     packages=find_packages('.', exclude=('tests*', 'testing*')),
     entry_points={
         'console_scripts': [
-            'check-requirements = requirements_checks.main:main',
+            'check-requirements = check_requirements.main:main',
         ],
     },
 )
