@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import io
@@ -194,6 +195,7 @@ def test_bower_package_versions():
 
 
 def main():  # pragma: no cover
+    print('Checking requirements...')
     # Forces quiet output and overrides pytest.ini
     os.environ['PYTEST_ADDOPTS'] = '-q'
     return pytest.main([__file__.replace('pyc', 'py')] + sys.argv[1:])
