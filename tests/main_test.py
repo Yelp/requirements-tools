@@ -210,10 +210,10 @@ def test_test_requirements_pinned_trivial():
 
 
 @pytest.mark.usefixtures('in_tmpdir')
-def test_test_requierments_pinned_all_pinned():
+def test_test_requirements_pinned_all_pinned():
     write_file(
         'requirements.txt',
-        'flake8==0.2.3\n'
+        'flake8==2.3.0\n'
         'pep8==1.6.1\n'
         'mccabe==0.3\n'
         'pyflakes==0.8.1\n'
@@ -226,15 +226,15 @@ def test_test_requierments_pinned_all_pinned():
 def test_test_requirements_pinned_missing_sime():
     write_file(
         'requirements.txt',
-        'flake8==0.2.3'
+        'flake8==2.3.0'
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_requirements_pinned()
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
-        '\tmccabe (required by flake8==0.2.3 in requirements.txt)\n'
-        '\tpep8 (required by flake8==0.2.3 in requirements.txt)\n'
-        '\tpyflakes (required by flake8==0.2.3 in requirements.txt)',
+        '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
+        '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
+        '\tpyflakes (required by flake8==2.3.0 in requirements.txt)',
     )
 
 
@@ -306,8 +306,9 @@ def test_test_bower_package_versions_no_bower_versions():
 
 @pytest.mark.usefixtures('in_tmpdir')
 def test_test_bower_package_versions_matching():
+    # TODO: use a dummy package to prevent flake8 upgrade + test breaking
     # Contrived, but let's assume flake8 is a bower package
-    write_file('bower.json', '{"dependencies": {"flake8": "2.4.1"}}')
+    write_file('bower.json', '{"dependencies": {"flake8": "2.5.0"}}')
     # Should not raise
     main.test_bower_package_versions()
 
@@ -322,6 +323,7 @@ def test_test_bower_package_irrelevant_version():
 
 @pytest.mark.usefixtures('in_tmpdir')
 def test_test_bower_package_versions_not_matching():
+    # TODO: use a dummy package to prevent flake8 upgrade + test breaking
     # Again, contrived, but let's assume flake8 is a bower package
     write_file('bower.json', '{"dependencies": {"flake8": "0.0.0"}}')
     with pytest.raises(AssertionError) as excinfo:
@@ -330,5 +332,5 @@ def test_test_bower_package_versions_not_matching():
         'Versions in python do not agree with bower versions:\n'
         'Package: flake8\n'
         'Bower: 0.0.0\n'
-        'Python: 2.4.1',
+        'Python: 2.5.0',
     )
