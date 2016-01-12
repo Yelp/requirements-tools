@@ -210,6 +210,14 @@ def test_test_requirements_pinned_trivial():
 
 
 @pytest.mark.usefixtures('in_tmpdir')
+def test_test_requirements_pinned_trivial_with_dev_too():
+    write_file('requirements.txt', '')
+    write_file('requirements-dev.txt', '')
+    # Should not raise
+    main.test_requirements_pinned()
+
+
+@pytest.mark.usefixtures('in_tmpdir')
 def test_test_requirements_pinned_all_pinned():
     write_file(
         'requirements.txt',
@@ -218,23 +226,43 @@ def test_test_requirements_pinned_all_pinned():
         'mccabe==0.3\n'
         'pyflakes==0.8.1\n'
     )
-    # Should also not raise (all satisfied
+    # Should also not raise (all satisfied)
     main.test_requirements_pinned()
 
 
 @pytest.mark.usefixtures('in_tmpdir')
-def test_test_requirements_pinned_missing_sime():
+def test_test_requirements_pinned_all_pinned_dev_only():
+    write_file(
+        'requirements-dev.txt',
+        'flake8==2.3.0\n'
+        'pep8==1.6.1\n'
+        'mccabe==0.3\n'
+        'pyflakes==0.8.1\n'
+    )
+    # Should also not raise (all satisfied)
+    main.test_requirements_pinned()
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_test_requirements_pinned_missing_some():
     write_file(
         'requirements.txt',
-        'flake8==2.3.0'
+        'flake8==2.3.0',
+    )
+    write_file(
+        'requirements-dev.txt',
+        'astroid==1.4.3',
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_requirements_pinned()
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
+        '\tlazy-object-proxy (required by astroid==1.4.3 in requirements-dev.txt)\n'  # noqa
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
         '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
-        '\tpyflakes (required by flake8==2.3.0 in requirements.txt)',
+        '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
+        '\tsix (required by astroid==1.4.3 in requirements-dev.txt)\n'
+        '\twrapt (required by astroid==1.4.3 in requirements-dev.txt)',
     )
 
 
@@ -276,6 +304,14 @@ def test_format_versions_on_lines_with_dashes_something():
         '\t- b\n'
         '\t- c'
     )
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_test_no_underscores_passes_reqs_dev_doesnt_exist():
+    """If requirements.txt exists (but not -dev.txt) we shouldn't raise."""
+    write_file('requirements.txt', 'foo==1')
+    # Should not raise
+    main.test_no_underscores_all_dashes()
 
 
 @pytest.mark.usefixtures('in_tmpdir')

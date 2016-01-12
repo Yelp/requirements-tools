@@ -13,6 +13,7 @@ import pytest
 
 
 installed_things = {pkg.key: pkg for pkg in pkg_resources.working_set}
+REQUIREMENTS_FILES = ('requirements.txt', 'requirements-dev.txt')
 
 
 def get_lines_from_file(filename):
@@ -73,7 +74,7 @@ def format_unpinned_requirements(unpinned_requirements):
     )
 
 
-def test_requirements_pinned(requirements_files=('requirements.txt',)):
+def test_requirements_pinned(requirements_files=REQUIREMENTS_FILES):
     if all(
             not os.path.exists(reqfile)
             for reqfile in requirements_files
@@ -81,7 +82,11 @@ def test_requirements_pinned(requirements_files=('requirements.txt',)):
         pytest.skip('No requirements files found')
 
     raw_requirements = sum(
-        [get_raw_requirements(reqfile) for reqfile in requirements_files],
+        [
+            get_raw_requirements(reqfile)
+            for reqfile in requirements_files
+            if os.path.exists(reqfile)
+        ],
         [],
     )
     unpinned_requirements = find_unpinned_requirements(raw_requirements)
@@ -157,7 +162,7 @@ def test_setup_dependencies():
         )
 
 
-def test_no_underscores_all_dashes(requirements_files=('requirements.txt',)):
+def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
     if all(
             not os.path.exists(reqfile)
             for reqfile in requirements_files
@@ -165,6 +170,8 @@ def test_no_underscores_all_dashes(requirements_files=('requirements.txt',)):
         pytest.skip('No requirements files found')
 
     for requirement_file in requirements_files:
+        if not os.path.exists(requirement_file):
+            continue
         for line in get_lines_from_file(requirement_file):
             if '_' in line:
                 raise AssertionError(
