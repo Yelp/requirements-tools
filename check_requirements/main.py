@@ -27,15 +27,21 @@ def get_lines_from_file(filename):
 def get_raw_requirements(filename):
     lines = get_lines_from_file(filename)
     return [
-        (pkg_resources.Requirement.parse(line), filename) for line in lines
+        (pkg_resources.Requirement.parse(line), filename)
+        for line in lines
+        if not line.startswith('-e ')
     ]
 
 
 def to_version(requirement):
+    """Given a requirement spec, return the pinned version.
+
+    Returns None if no single version is pinned.
+    """
     if len(requirement.specs) != 1:
-        raise AssertionError('Expected one spec: {!r}'.format(requirement))
+        return
     if requirement.specs[0][0] != '==':
-        raise AssertionError('Expected == spec: {!r}'.format(requirement))
+        return
     return requirement.specs[0][1]
 
 
@@ -55,22 +61,38 @@ def find_unpinned_requirements(requirements):
     """
     pinned_versions = to_pinned_versions(requirements)
 
-    unpinned = set()
+    unpinned = set(
+        # unpinned packages already listed in requirements.txt
+        (requirement.key, requirement, filename)
+        for requirement, filename in requirements
+        if not pinned_versions[requirement.key]
+    )
+
+    # unpinned packages which are needed but not listed in requirements.txt
     for requirement, filename in requirements:
         package_info = installed_things[requirement.key]
 
         for sub_requirement in package_info.requires(requirement.extras):
             if sub_requirement.key not in pinned_versions:
                 unpinned.add(
-                    (sub_requirement.project_name, requirement, filename)
+                    (sub_requirement.key, requirement, filename)
                 )
+
     return unpinned
 
 
 def format_unpinned_requirements(unpinned_requirements):
     return '\t' + '\n\t'.join(
-        '{} (required by {} in {})'.format(*req)
-        for req in sorted(unpinned_requirements)
+        '{} (required by {} in {})\n\t\tmaybe you want "{}"?'.format(
+            package,
+            requirement,
+            filename,
+            '{}=={}'.format(package, installed_things[package].version),
+        )
+        for package, requirement, filename in sorted(
+            unpinned_requirements,
+            key=str,
+        )
     )
 
 

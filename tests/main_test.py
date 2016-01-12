@@ -42,7 +42,7 @@ def test_get_raw_requirements_trivial(tmpdir):
 
 def test_get_raw_requirements_some_things(tmpdir):
     reqs_filename = tmpdir.join('requirements.txt').strpath
-    write_file(reqs_filename, 'foo==1\nbar==2')
+    write_file(reqs_filename, '-e .\nfoo==1\nbar==2')
     requirements = main.get_raw_requirements(reqs_filename)
     assert requirements == [
         (pkg_resources.Requirement.parse('foo==1'), reqs_filename),
@@ -52,6 +52,9 @@ def test_get_raw_requirements_some_things(tmpdir):
 
 def test_to_version():
     assert main.to_version(pkg_resources.Requirement.parse('foo==2')) == '2'
+    assert main.to_version(pkg_resources.Requirement.parse('foo')) is None
+    assert main.to_version(pkg_resources.Requirement.parse('foo>3')) is None
+    assert main.to_version(pkg_resources.Requirement.parse('foo>3,<7')) is None
 
 
 def test_to_equality_str():
@@ -95,8 +98,11 @@ def test_format_unpinned_requirements():
     ret = main.format_unpinned_requirements(unpinned)
     assert ret == (
         "\tmccabe (required by flake8==2.3.0 in reqs.txt)\n"
+        '\t\tmaybe you want "mccabe==0.3.1"?\n'
         "\tpep8 (required by flake8==2.3.0 in reqs.txt)\n"
-        "\tpyflakes (required by flake8==2.3.0 in reqs.txt)"
+        '\t\tmaybe you want "pep8==1.7.0"?\n'
+        "\tpyflakes (required by flake8==2.3.0 in reqs.txt)\n"
+        '\t\tmaybe you want "pyflakes==1.0.0"?'
     )
 
 
@@ -258,11 +264,17 @@ def test_test_requirements_pinned_missing_some():
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
         '\tlazy-object-proxy (required by astroid==1.4.3 in requirements-dev.txt)\n'  # noqa
+        '\t\tmaybe you want "lazy-object-proxy==1.2.1"?\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
+        '\t\tmaybe you want "mccabe==0.3.1"?\n'
         '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pep8==1.7.0"?\n'
         '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pyflakes==1.0.0"?\n'
         '\tsix (required by astroid==1.4.3 in requirements-dev.txt)\n'
-        '\twrapt (required by astroid==1.4.3 in requirements-dev.txt)',
+        '\t\tmaybe you want "six==1.10.0"?\n'
+        '\twrapt (required by astroid==1.4.3 in requirements-dev.txt)\n'
+        '\t\tmaybe you want "wrapt==1.10.6"?',
     )
 
 
