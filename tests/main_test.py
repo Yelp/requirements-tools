@@ -163,24 +163,24 @@ def mock_get_raw_requirements_abc():
     'in_tmpdir', 'mock_package_name',
     'mock_pinned_from_requirement_abc', 'mock_get_raw_requirements_abc',
 )
-def test_test_setup_dependencies_all_satisfied():
+def test_test_top_level_dependencies():
     # So we don't skip
     write_file('setup.py', '')
     write_file('requirements.txt', '')
     # Should pass since all are satisfied
-    main.test_setup_dependencies()
+    main.test_top_level_dependencies()
 
 
 @pytest.mark.usefixtures(
     'in_tmpdir', 'mock_package_name',
     'mock_pinned_from_requirement_abc', 'mock_get_raw_requirements_ab',
 )
-def test_test_setup_dependencies_too_much_pinned():
+def test_test_top_level_dependencies_too_much_pinned():
     # So we don't skip
     write_file('setup.py', '')
     write_file('requirements.txt', '')
     with pytest.raises(AssertionError) as excinfo:
-        main.test_setup_dependencies()
+        main.test_top_level_dependencies()
     assert excinfo.value.args == (
         'Dependencies derived from setup.py are not pinned in '
         'requirements.txt\n'
@@ -198,7 +198,7 @@ def test_test_dependencies_not_enough_pinned():
     write_file('setup.py', '')
     write_file('requirements.txt', '')
     with pytest.raises(AssertionError) as excinfo:
-        main.test_setup_dependencies()
+        main.test_top_level_dependencies()
     assert excinfo.value.args == (
         'Requirements are pinned in requirements.txt but are not depended '
         'on in setup.py\n'
@@ -309,12 +309,16 @@ def test_format_versions_on_lines_with_dashes_trivial():
 
 
 def test_format_versions_on_lines_with_dashes_something():
-    versions = ['a', 'b', 'c']
+    versions = [
+        pkg_resources.Requirement.parse('a==4.5.6'),
+        pkg_resources.Requirement.parse('b==1.2.3'),
+        pkg_resources.Requirement.parse('c==7'),
+    ]
     ret = main.format_versions_on_lines_with_dashes(versions)
     assert ret == (
-        '\t- a\n'
-        '\t- b\n'
-        '\t- c'
+        '\t- a==4.5.6\n'
+        '\t- b==1.2.3\n'
+        '\t- c==7'
     )
 
 

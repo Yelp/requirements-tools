@@ -7,6 +7,7 @@ import json
 import os.path
 import subprocess
 import sys
+from operator import attrgetter
 
 import pkg_resources
 import pytest
@@ -61,18 +62,19 @@ def find_unpinned_requirements(requirements):
     """
     pinned_versions = to_pinned_versions(requirements)
 
-    unpinned = set(
+    unpinned = {
         # unpinned packages already listed in requirements.txt
         (requirement.key, requirement, filename)
         for requirement, filename in requirements
         if not pinned_versions[requirement.key]
-    )
+    }
 
     # unpinned packages which are needed but not listed in requirements.txt
     for requirement, filename in requirements:
         package_info = installed_things[requirement.key]
 
         for sub_requirement in package_info.requires(requirement.extras):
+
             if sub_requirement.key not in pinned_versions:
                 unpinned.add(
                     (sub_requirement.key, requirement, filename)
@@ -129,7 +131,7 @@ def get_package_name():
 def get_pinned_versions_from_requirement(requirement):
     expected_pinned = set()
     parsed = pkg_resources.Requirement.parse(requirement)
-    requirements_to_parse = [installed_things[parsed.key]]
+    requirements_to_parse = [parsed]
     while requirements_to_parse:
         req = requirements_to_parse.pop()
         installed_req = installed_things[req.key]
@@ -143,45 +145,101 @@ def get_pinned_versions_from_requirement(requirement):
 
 
 def format_versions_on_lines_with_dashes(versions):
-    return '\n'.join('\t- {}'.format(req) for req in sorted(versions))
+    return '\n'.join(
+        '\t- {}'.format(req)
+        for req in sorted(versions, key=attrgetter('key'))
+    )
 
 
-def test_setup_dependencies():
-    if (
-            not os.path.exists('setup.py') or
-            not os.path.exists('requirements.txt')
+def test_top_level_dependencies():
+    """Test that top-level requirements (setup.py and reqs-dev-minimal) are
+    consistent with the pinned requirements.
+    """
+    if all(
+            not os.path.exists(path) for path in (
+                'setup.py',
+                'requirements.txt',
+                'requirements-dev-minimal.txt',
+                'requirements-dev.txt',
+            )
     ):  # pragma: no cover
-        pytest.skip('No setup.py or requirements.txt')
+        pytest.skip('No requirements files')
 
     package_name = get_package_name()
-    expected_pinned = get_pinned_versions_from_requirement(package_name)
-    expected_pinned = {
-        pkg_resources.Requirement.parse(s) for s in expected_pinned
-    }
-    requirements = {
-        req for req, _ in get_raw_requirements('requirements.txt')
-    }
-    pinned_but_not_required = requirements - expected_pinned
-    required_but_not_pinned = expected_pinned - requirements
-    if pinned_but_not_required:
-        raise AssertionError(
-            'Requirements are pinned in requirements.txt but are not depended '
-            'on in setup.py\n'
-            '(Probably need to add something to setup.py)\n'
-            '(or remove from requirements.txt):\n'
-            '{}'.format(format_versions_on_lines_with_dashes(
-                pinned_but_not_required,
+
+    expected_pinned_prod_deps = get_pinned_versions_from_requirement(
+        package_name,
+    )
+    expected_pinned_dev_deps = set()
+
+    if os.path.exists('requirements-dev-minimal.txt'):
+        for req, _ in get_raw_requirements('requirements-dev-minimal.txt'):
+            expected_pinned_dev_deps.add('{}=={}'.format(
+                req.key,
+                installed_things[req.key].version,
             ))
-        )
-    if required_but_not_pinned:
-        raise AssertionError(
-            'Dependencies derived from setup.py are not pinned in '
-            'requirements.txt\n'
-            '(Probably need to add something to requirements.txt):\n'
-            '{}'.format(format_versions_on_lines_with_dashes(
-                required_but_not_pinned,
-            )),
-        )
+            expected_pinned_dev_deps |= get_pinned_versions_from_requirement(
+                req.key,
+            )
+
+    # if there are overlapping prod/dev deps, only list in prod requirements
+    expected_pinned_dev_deps -= expected_pinned_prod_deps
+
+    environments = [
+        (
+            expected_pinned_prod_deps,
+            'requirements.txt',
+            'setup.py',
+        ),
+        (
+            expected_pinned_dev_deps,
+            'requirements-dev.txt',
+            'requirements-dev-minimal.txt',
+        ),
+    ]
+
+    for expected_pinned, pin_filename, minimal_filename in environments:
+        expected_pinned = {
+            pkg_resources.Requirement.parse(s) for s in expected_pinned
+        }
+        if os.path.exists(pin_filename):
+            requirements = {
+                req for req, _ in get_raw_requirements(pin_filename)
+            }
+        else:
+            requirements = set()
+
+        pinned_but_not_required = requirements - expected_pinned
+        required_but_not_pinned = expected_pinned - requirements
+
+        if pinned_but_not_required:
+            raise AssertionError(
+                'Requirements are pinned in {pin} but are not depended '
+                'on in {minimal}\n'
+                '(Probably need to add something to {minimal})\n'
+                '(or remove from {pin}):\n'
+                '{}'.format(
+                    format_versions_on_lines_with_dashes(
+                        pinned_but_not_required,
+                    ),
+                    pin=pin_filename,
+                    minimal=minimal_filename,
+                )
+            )
+
+        if required_but_not_pinned:
+            raise AssertionError(
+                'Dependencies derived from {minimal} are not pinned in '
+                '{pin}\n'
+                '(Probably need to add something to {pin}):\n'
+                '{}'.format(
+                    format_versions_on_lines_with_dashes(
+                        required_but_not_pinned,
+                    ),
+                    pin=pin_filename,
+                    minimal=minimal_filename
+                ),
+            )
 
 
 def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
