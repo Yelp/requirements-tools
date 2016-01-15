@@ -170,9 +170,17 @@ def test_top_level_dependencies():
     expected_pinned_prod_deps = get_pinned_versions_from_requirement(
         package_name,
     )
-    expected_pinned_dev_deps = set()
+
+    environments = [
+        (
+            expected_pinned_prod_deps,
+            'requirements.txt',
+            'setup.py',
+        ),
+    ]
 
     if os.path.exists('requirements-dev-minimal.txt'):
+        expected_pinned_dev_deps = set()
         for req, _ in get_raw_requirements('requirements-dev-minimal.txt'):
             expected_pinned_dev_deps.add('{}=={}'.format(
                 req.key,
@@ -181,22 +189,28 @@ def test_top_level_dependencies():
             expected_pinned_dev_deps |= get_pinned_versions_from_requirement(
                 req.key,
             )
-
-    # if there are overlapping prod/dev deps, only list in prod requirements
-    expected_pinned_dev_deps -= expected_pinned_prod_deps
-
-    environments = [
-        (
-            expected_pinned_prod_deps,
-            'requirements.txt',
-            'setup.py',
-        ),
-        (
+        # if there are overlapping prod/dev deps, only list in prod
+        # requirements
+        expected_pinned_dev_deps -= expected_pinned_prod_deps
+        environments.append((
             expected_pinned_dev_deps,
             'requirements-dev.txt',
             'requirements-dev-minimal.txt',
-        ),
-    ]
+        ))
+    else:
+        print(
+            '\033[93;1m'
+            'Warning: check-requirements is *not* checking your dev '
+            'dependencies.\n'
+            '\033[0m\033[93m'
+            'To have your dev dependencies checked, create a file named '
+            'requirements-dev-minimal.txt listing your minimal dev '
+            'dependencies.\n'
+            'See '
+            'https://gitweb.yelpcorp.com/?p=python_packages/check_requirements.git;a=blob;f=README.md '  # noqa
+            'for more information.'
+            '\033[0m'
+        )
 
     for expected_pinned, pin_filename, minimal_filename in environments:
         expected_pinned = {

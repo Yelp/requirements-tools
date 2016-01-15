@@ -221,20 +221,15 @@ def mocked_package(package_name='pkg', prod_deps=(), dev_deps=()):
 
 @pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
 def test_test_top_level_dependencies_no_requirements_dev_minimal():
-    """If there's no requirements-dev-minimal.txt but there's a
-    requirements-dev.txt, we should tell you to put stuff in -minimal.
-    """
+    """If there's no requirements-dev-minimal.txt, we should suggest you create
+    a requirements-dev-minimal.txt but not fail."""
     write_file('requirements-dev.txt', 'a\nb==3\n')
     with mocked_package(dev_deps=(('a', '4'), ('b', '3'))):
-        with pytest.raises(AssertionError) as excinfo:
-            main.test_top_level_dependencies()
-    assert excinfo.value.args == (
-        'Requirements are pinned in requirements-dev.txt but are not '
-        'depended on in requirements-dev-minimal.txt\n'
-        '(Probably need to add something to requirements-dev-minimal.txt)\n'
-        '(or remove from requirements-dev.txt):\n'
-        '\t- a\n'
-        '\t- b==3',
+        with mock.patch.object(main, 'print') as fake_print:
+            main.test_top_level_dependencies()  # should not raise
+    assert (
+        'Warning: check-requirements is *not* checking your dev dependencies.'
+        in fake_print.call_args[0][0]
     )
 
 
