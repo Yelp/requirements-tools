@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import io
 import os
+from contextlib import contextmanager
 
 import mock
 import pkg_resources
@@ -189,11 +190,141 @@ def test_test_top_level_dependencies_too_much_pinned():
     )
 
 
+@contextmanager
+def mocked_package(package_name='pkg', prod_deps=(), dev_deps=()):
+    def fake_get_pinned_versions_from_requirement(req):
+        """If it's the package itself, return prod deps. If it's any other
+        package, assume it's a dev dep and return all dev dependencies.
+
+        This is not great but short of real integration tests it works...
+        """
+        if req == package_name:
+            deps = prod_deps
+        else:
+            deps = dev_deps
+        return set(['=='.join(dep) for dep in deps])
+
+    with mock.patch.object(
+        main,
+        'get_pinned_versions_from_requirement',
+        side_effect=fake_get_pinned_versions_from_requirement,
+    ), mock.patch.object(
+        main,
+        'installed_things',
+        {
+            package: mock.Mock(version=version)
+            for package, version in prod_deps + dev_deps
+        }
+    ):
+        yield
+
+
+@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
+def test_test_top_level_dependencies_no_requirements_dev_minimal():
+    """If there's no requirements-dev-minimal.txt but there's a
+    requirements-dev.txt, we should tell you to put stuff in -minimal.
+    """
+    write_file('requirements-dev.txt', 'a\nb==3\n')
+    with mocked_package(dev_deps=(('a', '4'), ('b', '3'))):
+        with pytest.raises(AssertionError) as excinfo:
+            main.test_top_level_dependencies()
+    assert excinfo.value.args == (
+        'Requirements are pinned in requirements-dev.txt but are not '
+        'depended on in requirements-dev-minimal.txt\n'
+        '(Probably need to add something to requirements-dev-minimal.txt)\n'
+        '(or remove from requirements-dev.txt):\n'
+        '\t- a\n'
+        '\t- b==3',
+    )
+
+
+@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
+def test_test_top_level_dependencies_no_dev_deps_pinned():
+    """If there's a requirements-dev-minimal.txt but no requirements-dev.txt,
+    we should tell you to pin everything there."""
+    write_file('requirements-dev-minimal.txt', 'a\nb\n')
+    with mocked_package(dev_deps=(('a', '2'), ('b', '3'))):
+        with pytest.raises(AssertionError) as excinfo:
+            main.test_top_level_dependencies()
+        assert excinfo.value.args == (
+            'Dependencies derived from requirements-dev-minimal.txt are '
+            'not pinned in requirements-dev.txt\n'
+            '(Probably need to add something to requirements-dev.txt):\n'
+            '\t- a==2\n'
+            '\t- b==3',
+        )
+
+        # and when you do pin it, now the tests pass! :D
+        write_file('requirements-dev.txt', 'a==2\nb==3\n')
+        main.test_top_level_dependencies()
+
+
+@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
+def test_test_top_level_dependencies_some_dev_deps_not_pinned():
+    """If there's a requirements-dev-minimal.txt but we're missing stuff in
+    requirements-dev.txt, we should tell you to pin more stuff there."""
+    write_file('requirements-dev-minimal.txt', 'a\nb\n')
+    write_file('requirements-dev.txt', 'a==2\n')
+    with mocked_package(dev_deps=(('a', '2'), ('b', '3'))):
+        with pytest.raises(AssertionError) as excinfo:
+            main.test_top_level_dependencies()
+        assert excinfo.value.args == (
+            'Dependencies derived from requirements-dev-minimal.txt are '
+            'not pinned in requirements-dev.txt\n'
+            '(Probably need to add something to requirements-dev.txt):\n'
+            '\t- b==3',
+        )
+
+        # and when you do pin it, now the tests pass! :D
+        write_file('requirements-dev.txt', 'a==2\nb==3\n')
+        main.test_top_level_dependencies()
+
+
+@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
+def test_test_top_level_dependencies_overlapping_prod_dev_deps():
+    """If we have a dep which is both a prod and dev dep, we should complain if
+    it appears in requirements-dev.txt."""
+    write_file('requirements-dev-minimal.txt', 'a\n')
+    write_file('requirements.txt', 'a==2\n')
+    write_file('requirements-dev.txt', 'a==2\n')
+    with mocked_package(prod_deps=[('a', '2')], dev_deps=[('a', '2')]):
+        with pytest.raises(AssertionError) as excinfo:
+            main.test_top_level_dependencies()
+        # TODO: this exception is misleading, ideally it should tell you that
+        # you don't need to pin it in reqs-dev.txt if it's also a prod dep
+        assert excinfo.value.args == (
+            'Requirements are pinned in requirements-dev.txt '
+            'but are not depended on in requirements-dev-minimal.txt\n'
+            '(Probably need to add something to '
+            'requirements-dev-minimal.txt)\n'
+            '(or remove from requirements-dev.txt):\n'
+            '\t- a==2',
+        )
+
+
+@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
+def test_test_top_level_dependencies_prod_dep_is_only_in_dev_deps():
+    """If we've defined a prod dependency only in requirements-dev.txt, we
+    should tell the user to put it in requirements.txt instead."""
+    write_file('requirements-dev-minimal.txt', 'a\n')
+    write_file('requirements.txt', '')
+    write_file('requirements-dev.txt', 'a==2\n')
+    with mocked_package(prod_deps=[('a', '2')], dev_deps=[('a', '2')]):
+        with pytest.raises(AssertionError) as excinfo:
+            main.test_top_level_dependencies()
+        assert excinfo.value.args == (
+            'Dependencies derived from setup.py are not pinned in '
+            'requirements.txt\n'
+            '(Probably need to add something to requirements.txt):\n'
+            '\t- a==2',
+        )
+
+
 @pytest.mark.usefixtures(
     'in_tmpdir', 'mock_package_name',
     'mock_pinned_from_requirement_ab', 'mock_get_raw_requirements_abc',
 )
-def test_test_dependencies_not_enough_pinned():
+def test_test_top_level_dependencies_not_enough_pinned():
     # So we don't skip
     write_file('setup.py', '')
     write_file('requirements.txt', '')
