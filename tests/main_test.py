@@ -389,6 +389,33 @@ def test_test_requirements_pinned_missing_some():
         main.test_requirements_pinned()
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
+        '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
+        '\t\tmaybe you want "mccabe==0.3.1"?\n'
+        '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pep8==1.7.0"?\n'
+        '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pyflakes==1.0.0"?',
+    )
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_test_requirements_pinned_missing_some_with_dev_reqs():
+    write_file(
+        'requirements.txt',
+        'flake8==2.3.0',
+    )
+    write_file(
+        'requirements-dev.txt',
+        'astroid==1.4.3',
+    )
+    write_file(
+        'requirements-dev-minimal.txt',
+        'astroid',
+    )
+    with pytest.raises(AssertionError) as excinfo:
+        main.test_requirements_pinned()
+    assert excinfo.value.args == (
+        'Unpinned requirements detected!\n\n'
         '\tlazy-object-proxy (required by astroid==1.4.3 in requirements-dev.txt)\n'  # noqa
         '\t\tmaybe you want "lazy-object-proxy==1.2.1"?\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'

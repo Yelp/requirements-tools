@@ -14,11 +14,7 @@ import pytest
 
 
 installed_things = {pkg.key: pkg for pkg in pkg_resources.working_set}
-REQUIREMENTS_FILES = ('requirements.txt',) + (
-    ('requirements-dev.txt',)
-    if os.path.exists('requirements-dev-minimal.txt')
-    else ()
-)
+REQUIREMENTS_FILES = frozenset(('requirements.txt', 'requirements-dev.txt'))
 
 
 def get_lines_from_file(filename):
@@ -103,6 +99,12 @@ def format_unpinned_requirements(unpinned_requirements):
 
 
 def test_requirements_pinned(requirements_files=REQUIREMENTS_FILES):
+    # for compatibility with repos that haven't started using
+    # requirements-dev-minimal.txt, we don't want to force pinning
+    # requirements-dev.txt until they use minimal
+    if not os.path.exists('requirements-dev-minimal.txt'):
+        requirements_files -= {'requirements-dev.txt'}
+
     if all(
             not os.path.exists(reqfile)
             for reqfile in requirements_files
