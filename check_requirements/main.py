@@ -14,7 +14,11 @@ import pytest
 
 
 installed_things = {pkg.key: pkg for pkg in pkg_resources.working_set}
-REQUIREMENTS_FILES = ('requirements.txt', 'requirements-dev.txt')
+REQUIREMENTS_FILES = ('requirements.txt',) + (
+    ('requirements-dev.txt',)
+    if os.path.exists('requirements-dev-minimal.txt')
+    else ()
+)
 
 
 def get_lines_from_file(filename):
@@ -203,12 +207,11 @@ def test_top_level_dependencies():
             'Warning: check-requirements is *not* checking your dev '
             'dependencies.\n'
             '\033[0m\033[93m'
-            'To have your dev dependencies checked, create a file named '
+            'To have your dev dependencies checked, create a file named\n'
             'requirements-dev-minimal.txt listing your minimal dev '
             'dependencies.\n'
             'See '
-            'https://gitweb.yelpcorp.com/?p=python_packages/check_requirements.git;a=blob;f=README.md '  # noqa
-            'for more information.'
+            'https://gitweb.yelpcorp.com/?p=python_packages/check_requirements.git;a=blob;f=README.md'  # noqa
             '\033[0m'
         )
 
@@ -298,7 +301,7 @@ def test_bower_package_versions():
 def main():  # pragma: no cover
     print('Checking requirements...')
     # Forces quiet output and overrides pytest.ini
-    os.environ['PYTEST_ADDOPTS'] = '-q'
+    os.environ['PYTEST_ADDOPTS'] = '-q -s'
     return pytest.main([__file__.replace('pyc', 'py')] + sys.argv[1:])
 
 
