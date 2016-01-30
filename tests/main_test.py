@@ -99,7 +99,7 @@ def test_format_unpinned_requirements():
     ret = main.format_unpinned_requirements(unpinned)
     assert ret == (
         "\tmccabe (required by flake8==2.3.0 in reqs.txt)\n"
-        '\t\tmaybe you want "mccabe==0.3.1"?\n'
+        '\t\tmaybe you want "mccabe==0.4.0"?\n'
         "\tpep8 (required by flake8==2.3.0 in reqs.txt)\n"
         '\t\tmaybe you want "pep8==1.7.0"?\n'
         "\tpyflakes (required by flake8==2.3.0 in reqs.txt)\n"
@@ -390,7 +390,7 @@ def test_test_requirements_pinned_missing_some():
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "mccabe==0.3.1"?\n'
+        '\t\tmaybe you want "mccabe==0.4.0"?\n'
         '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
         '\t\tmaybe you want "pep8==1.7.0"?\n'
         '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
@@ -419,7 +419,7 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
         '\tlazy-object-proxy (required by astroid==1.4.3 in requirements-dev.txt)\n'  # noqa
         '\t\tmaybe you want "lazy-object-proxy==1.2.1"?\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "mccabe==0.3.1"?\n'
+        '\t\tmaybe you want "mccabe==0.4.0"?\n'
         '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
         '\t\tmaybe you want "pep8==1.7.0"?\n'
         '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
@@ -513,7 +513,7 @@ def test_test_bower_package_versions_no_bower_versions():
 def test_test_bower_package_versions_matching():
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
     # Contrived, but let's assume flake8 is a bower package
-    write_file('bower.json', '{"dependencies": {"flake8": "2.5.1"}}')
+    write_file('bower.json', '{"dependencies": {"flake8": "2.5.2"}}')
     # Should not raise
     main.test_bower_package_versions()
 
@@ -537,5 +537,5 @@ def test_test_bower_package_versions_not_matching():
         'Versions in python do not agree with bower versions:\n'
         'Package: flake8\n'
         'Bower: 0.0.0\n'
-        'Python: 2.5.1',
+        'Python: 2.5.2',
     )
