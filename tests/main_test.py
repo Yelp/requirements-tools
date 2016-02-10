@@ -364,6 +364,7 @@ def test_test_requirements_pinned_all_pinned():
 
 @pytest.mark.usefixtures('in_tmpdir')
 def test_test_requirements_pinned_all_pinned_dev_only():
+    write_file('requirements-dev-minimal.txt', 'flake8==2.3.0')
     write_file(
         'requirements-dev.txt',
         'flake8==2.3.0\n'
@@ -455,6 +456,11 @@ def test_get_pinned_versions_from_requirement():
     split = [req.split('==') for req in result]
     packages = [package for package, _ in split]
     assert packages == ['mccabe', 'pep8', 'pyflakes']
+
+
+def test_get_pinned_versions_from_requirement_circular():
+    # Used to hang forever
+    assert main.get_pinned_versions_from_requirement('sphinx')
 
 
 def test_format_versions_on_lines_with_dashes_trivial():
