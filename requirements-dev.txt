@@ -5,3 +5,5 @@ mock
 pre-commit
 pylint
 pytest
+# A circular dependency
+sphinx
