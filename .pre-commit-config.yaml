@@ -5,10 +5,10 @@
     -   id: end-of-file-fixer
     -   id: autopep8-wrapper
     -   id: check-docstring-first
+    -   id: check-json
     -   id: check-yaml
     -   id: debug-statements
         language_version: python2.7
-    -   id: name-tests-test
     -   id: requirements-txt-fixer
     -   id: flake8
         language_version: python2.7

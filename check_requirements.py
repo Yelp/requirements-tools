@@ -74,7 +74,6 @@ def find_unpinned_requirements(requirements):
         package_info = installed_things[requirement.key]
 
         for sub_requirement in package_info.requires(requirement.extras):
-
             if sub_requirement.key not in pinned_versions:
                 unpinned.add(
                     (sub_requirement.key, requirement, filename)
@@ -312,6 +311,81 @@ def test_bower_package_versions():
                         package_name, bower_version, python_version,
                     )
                 )
+
+
+def bower_assert_pinned(pkg, version_spec):
+    illegal_starts = (
+        # https://github.com/npm/node-semver#ranges
+        '<', '>',
+        # https://github.com/npm/node-semver#caret-ranges-123-025-004
+        '^',
+        # https://github.com/npm/node-semver#tilde-ranges-123-12-1
+        '~',
+    )
+
+    illegal_substrings = (
+        # https://github.com/npm/node-semver#ranges
+        '||',
+        # https://github.com/npm/node-semver#x-ranges-12x-1x-12-
+        '.x',
+        '*',
+        # https://github.com/npm/node-semver#hyphen-ranges-xyz---abc
+        ' - ',
+    )
+
+    # Rougly based on https://github.com/npm/node-semver#ranges
+    if (
+            not version_spec or
+            version_spec.startswith(illegal_starts) or
+            any(part in version_spec.lower() for part in illegal_substrings)
+    ):
+        raise AssertionError(
+            'Expected all versions in bower.json to be strictly pinned\n'
+            'Found "{}": "{}"'.format(pkg, version_spec),
+        )
+
+
+def bower_find_unpinned(bower_list):
+    pinned = bower_list['pkgMeta']['dependencies']
+    unpinned = set()
+
+    for pkg, pkg_version in pinned.items():
+        bower_assert_pinned(pkg, pkg_version)
+        pkgdep = '"{}": "{}"'.format(pkg, pkg_version)
+        subdeps = bower_list['dependencies'][pkg]['dependencies']
+        for subdep, subdep_info in subdeps.items():
+            if subdep not in pinned:
+                unpinned.add((
+                    subdep, subdep_info['pkgMeta']['version'], pkgdep,
+                ))
+
+    return unpinned
+
+
+def bower_format_unpinned_requirements(unpinned_requirements):
+    return '\t' + '\n\t'.join(
+        '{} (required by {} in bower.json)\n\t\tmaybe you want {}?'.format(
+            pkg,
+            requirement,
+            '"{}": "{}"'.format(pkg, version),
+        )
+        for pkg, version, requirement in sorted(unpinned_requirements)
+    )
+
+
+def test_all_bower_packages_pinned():
+    if not os.path.exists('bower.json'):  # pragma: no cover
+        pytest.skip('No bower.json file')
+
+    bower_list = json.loads(subprocess.check_output((
+        'bower', 'list', '--json', '--offline',
+    )).decode('UTF-8'))
+
+    unpinned = bower_find_unpinned(bower_list)
+    if unpinned:
+        raise AssertionError('Unpinned requirements detected!\n\n{}'.format(
+            bower_format_unpinned_requirements(unpinned),
+        ))
 
 
 def main():  # pragma: no cover

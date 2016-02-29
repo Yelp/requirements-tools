@@ -1,9 +1,12 @@
+# pylint:disable=redefined-outer-name
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import contextlib
 import io
+import json
 import os
-from contextlib import contextmanager
+import subprocess
 
 import mock
 import pkg_resources
@@ -190,7 +193,7 @@ def test_test_top_level_dependencies_too_much_pinned():
     )
 
 
-@contextmanager
+@contextlib.contextmanager
 def mocked_package(package_name='pkg', prod_deps=(), dev_deps=()):
     def fake_get_pinned_versions_from_requirement(req):
         """If it's the package itself, return prod deps. If it's any other
@@ -561,4 +564,98 @@ def test_check_requirements_is_only_for_applications_failing():
         'mind (and does not properly work for libraries).\n'
         "Either remove check-requirements (if you're a library) or "
         '`touch requirements.txt`.',
+    )
+
+
+@pytest.mark.parametrize(
+    'version',
+    (
+        '<1',
+        '<=1',
+        '>1',
+        '>=1',
+        '1 || 2',
+        '1 - 2',
+        '1.2.x',
+        '1.2.*',
+        '*',
+        '',
+        '~1',
+        '^1',
+    ),
+)
+def test_bower_assert_pinned_bad(version):
+    with pytest.raises(AssertionError):
+        main.bower_assert_pinned('pkg', version)
+
+
+def test_bower_assert_pined_ok():
+    main.bower_assert_pinned('pkg', '1.2.3')
+
+
+def resource(f):
+    return os.path.join(os.path.dirname(__file__), 'testing', f)
+
+
+@pytest.fixture
+def passing_bower_list():
+    with io.open(resource('passing_bower_list.json')) as f:
+        return json.load(f)
+
+
+@pytest.fixture
+def failing_bower_list():
+    with io.open(resource('failing_bower_list.json')) as f:
+        return json.load(f)
+
+
+def test_bower_find_unpinned_all_pinned(passing_bower_list):
+    assert main.bower_find_unpinned(passing_bower_list) == set()
+
+
+def test_bower_find_unpinned_with_unpinned(failing_bower_list):
+    assert main.bower_find_unpinned(failing_bower_list) == {
+        ('jquery', '2.2.1', '"flot": "0.8.3"'),
+    }
+
+
+def test_bower_format_unpinned_requirements():
+    ret = main.bower_format_unpinned_requirements({
+        ('f', '2', '"c": "1"'),
+        ('a', '1', '"b": "1"'),
+    })
+    assert ret == (
+        '\ta (required by "b": "1" in bower.json)\n'
+        '\t\tmaybe you want "a": "1"?\n'
+        '\tf (required by "c": "1" in bower.json)\n'
+        '\t\tmaybe you want "f": "2"?'
+    )
+
+
+@contextlib.contextmanager
+def bower_returns(this):
+    with mock.patch.object(
+        subprocess, 'check_output',
+        return_value=json.dumps(this).encode('UTF-8'),
+    ):
+        yield
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_all_bower_packages_pinned_passing(passing_bower_list):
+    write_file('bower.json', '{}')
+    with bower_returns(passing_bower_list):
+        main.test_all_bower_packages_pinned()
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_all_bower_packages_pinned_failing(failing_bower_list):
+    write_file('bower.json', '{}')
+    with pytest.raises(AssertionError) as excinfo:
+        with bower_returns(failing_bower_list):
+            main.test_all_bower_packages_pinned()
+    assert excinfo.value.args == (
+        'Unpinned requirements detected!\n\n'
+        '\tjquery (required by "flot": "0.8.3" in bower.json)\n'
+        '\t\tmaybe you want "jquery": "2.2.1"?',
     )
