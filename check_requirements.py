@@ -306,7 +306,7 @@ def test_bower_package_versions():
 def main():  # pragma: no cover
     print('Checking requirements...')
     # Forces quiet output and overrides pytest.ini
-    os.environ['PYTEST_ADDOPTS'] = '-q -s'
+    os.environ['PYTEST_ADDOPTS'] = '-q -s --tb=short'
     return pytest.main([__file__.replace('pyc', 'py')] + sys.argv[1:])
 
 
