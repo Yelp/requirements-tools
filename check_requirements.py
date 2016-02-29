@@ -98,6 +98,17 @@ def format_unpinned_requirements(unpinned_requirements):
     )
 
 
+@pytest.fixture(autouse=True, scope='session')
+def check_requirements_is_only_for_applications():
+    if not os.path.exists('requirements.txt'):
+        raise AssertionError(
+            'check-requirements is designed specifically with applications '
+            'in mind (and does not properly work for libraries).\n'
+            "Either remove check-requirements (if you're a library) or "
+            '`touch requirements.txt`.'
+        )
+
+
 def test_requirements_pinned(requirements_files=REQUIREMENTS_FILES):
     # for compatibility with repos that haven't started using
     # requirements-dev-minimal.txt, we don't want to force pinning

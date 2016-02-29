@@ -545,3 +545,20 @@ def test_test_bower_package_versions_not_matching():
         'Bower: 0.0.0\n'
         'Python: 2.5.4',
     )
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_check_requirements_is_only_for_applications():
+    write_file('requirements.txt', '')
+    main.check_requirements_is_only_for_applications()
+
+
+def test_check_requirements_is_only_for_applications_failing():
+    with pytest.raises(AssertionError) as excinfo:
+        main.check_requirements_is_only_for_applications()
+    assert excinfo.value.args == (
+        'check-requirements is designed specifically with applications in '
+        'mind (and does not properly work for libraries).\n'
+        "Either remove check-requirements (if you're a library) or "
+        '`touch requirements.txt`.',
+    )
