@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from setuptools import find_packages
 from setuptools import setup
 
 
@@ -14,10 +13,10 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     install_requires=['pytest'],
-    packages=find_packages('.', exclude=('tests*', 'testing*')),
+    py_modules=['check_requirements'],
     entry_points={
         'console_scripts': [
-            'check-requirements = check_requirements.main:main',
+            'check-requirements = check_requirements:main',
         ],
     },
 )

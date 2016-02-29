@@ -9,7 +9,7 @@ import mock
 import pkg_resources
 import pytest
 
-from check_requirements import main
+import check_requirements as main
 
 
 def write_file(filename, contents):
