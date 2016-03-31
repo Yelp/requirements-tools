@@ -410,7 +410,7 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
     )
     write_file(
         'requirements-dev.txt',
-        'astroid==1.4.3',
+        'astroid==1.4.5',
     )
     write_file(
         'requirements-dev-minimal.txt',
@@ -420,7 +420,7 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
         main.test_requirements_pinned()
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
-        '\tlazy-object-proxy (required by astroid==1.4.3 in requirements-dev.txt)\n'  # noqa
+        '\tlazy-object-proxy (required by astroid==1.4.5 in requirements-dev.txt)\n'  # noqa
         '\t\tmaybe you want "lazy-object-proxy==1.2.1"?\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
         '\t\tmaybe you want "mccabe==0.4.0"?\n'
@@ -428,10 +428,10 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
         '\t\tmaybe you want "pep8==1.7.0"?\n'
         '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
         '\t\tmaybe you want "pyflakes==1.0.0"?\n'
-        '\tsix (required by astroid==1.4.3 in requirements-dev.txt)\n'
+        '\tsix (required by astroid==1.4.5 in requirements-dev.txt)\n'
         '\t\tmaybe you want "six==1.10.0"?\n'
-        '\twrapt (required by astroid==1.4.3 in requirements-dev.txt)\n'
-        '\t\tmaybe you want "wrapt==1.10.6"?',
+        '\twrapt (required by astroid==1.4.5 in requirements-dev.txt)\n'
+        '\t\tmaybe you want "wrapt==1.10.7"?',
     )
 
 
