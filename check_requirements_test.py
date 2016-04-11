@@ -431,7 +431,7 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
         '\tsix (required by astroid==1.4.5 in requirements-dev.txt)\n'
         '\t\tmaybe you want "six==1.10.0"?\n'
         '\twrapt (required by astroid==1.4.5 in requirements-dev.txt)\n'
-        '\t\tmaybe you want "wrapt==1.10.7"?',
+        '\t\tmaybe you want "wrapt==1.10.8"?',
     )
 
 
