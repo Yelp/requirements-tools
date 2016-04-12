@@ -13,8 +13,21 @@ import pkg_resources
 import pytest
 
 
-installed_things = {pkg.key: pkg for pkg in pkg_resources.working_set}
+installed_things = {
+    pkg.key: pkg
+    for pkg in pkg_resources.working_set  # pylint:disable=not-an-iterable
+}
 REQUIREMENTS_FILES = frozenset(('requirements.txt', 'requirements-dev.txt'))
+
+
+def parse_requirement(req):
+    dumb_parse = pkg_resources.Requirement.parse(req)
+    return pkg_resources.Requirement.parse(
+        dumb_parse.project_name + ','.join(
+            operator + pkg_resources.safe_version(version)
+            for operator, version in dumb_parse.specs
+        )
+    )
 
 
 def get_lines_from_file(filename):
@@ -28,7 +41,7 @@ def get_lines_from_file(filename):
 def get_raw_requirements(filename):
     lines = get_lines_from_file(filename)
     return [
-        (pkg_resources.Requirement.parse(line), filename)
+        (parse_requirement(line), filename)
         for line in lines
         if not line.startswith('-e ')
     ]
@@ -146,7 +159,7 @@ def get_package_name():
 
 def get_pinned_versions_from_requirement(requirement):
     expected_pinned = set()
-    parsed = pkg_resources.Requirement.parse(requirement)
+    parsed = parse_requirement(requirement)
     requirements_to_parse = [parsed]
     already_parsed = {parsed.key}
     while requirements_to_parse:
@@ -232,7 +245,7 @@ def test_top_level_dependencies():
 
     for expected_pinned, pin_filename, minimal_filename in environments:
         expected_pinned = {
-            pkg_resources.Requirement.parse(s) for s in expected_pinned
+            parse_requirement(s) for s in expected_pinned
         }
         if os.path.exists(pin_filename):
             requirements = {

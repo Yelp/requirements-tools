@@ -20,6 +20,21 @@ def write_file(filename, contents):
         f.write(contents)
 
 
+@pytest.mark.parametrize(
+    ('reqin', 'reqout'),
+    (
+        ('a', 'a'),
+        ('a==1', 'a==1'),
+        ('a==1,<3', 'a==1,<3'),
+    ),
+)
+def test_parse_requirement(reqin, reqout):
+    assert (
+        main.parse_requirement(reqin) ==
+        pkg_resources.Requirement.parse(reqout)
+    )
+
+
 def test_get_lines_from_file_trivial(tmpdir):
     tmpfile = tmpdir.join('foo').strpath
     write_file(tmpfile, '')
@@ -191,6 +206,21 @@ def test_test_top_level_dependencies_too_much_pinned():
         '(Probably need to add something to requirements.txt):\n'
         '\t- c==3',
     )
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+@pytest.mark.parametrize('version', ('1.2.3-rc1', '1.2.3rc1'))
+def test_prerelease_name_normalization(version):
+    write_file(
+        'setup.py',
+        'from setuptools import setup\n'
+        'setup(\n'
+        '    name="depends-on-prerelease-pkg",\n'
+        '    install_requires=["prerelease-pkg"],\n'
+        ')\n'
+    )
+    write_file('requirements.txt', 'prerelease-pkg=={}'.format(version))
+    main.test_top_level_dependencies()
 
 
 @contextlib.contextmanager
