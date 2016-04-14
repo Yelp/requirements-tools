@@ -451,7 +451,7 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
         '\tlazy-object-proxy (required by astroid==1.4.5 in requirements-dev.txt)\n'  # noqa
-        '\t\tmaybe you want "lazy-object-proxy==1.2.1"?\n'
+        '\t\tmaybe you want "lazy-object-proxy==1.2.2"?\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
         '\t\tmaybe you want "mccabe==0.4.0"?\n'
         '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
