@@ -7,6 +7,7 @@ import json
 import os.path
 import subprocess
 import sys
+from collections import defaultdict
 from operator import attrgetter
 
 import pkg_resources
@@ -306,22 +307,50 @@ def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
                 )
 
 
-def test_bower_package_versions():
-    if not os.path.exists('bower.json'):  # pragma: no cover
-        pytest.skip('No bower.json file')
-    bower_contents = json.loads(io.open('bower.json').read())
-    for package_name, bower_version in bower_contents['dependencies'].items():
-        # Normalize underscores to dashes
-        package_name = package_name.replace('_', '-')
+def test_javascript_package_versions():
+    """Make sure package.json and bower.json versions agree with each other,
+    and with the Python versions.
+    """
+    files = ['bower.json', 'package.json']
+    if not any(os.path.exists(f) for f in files):  # pragma: no cover
+        pytest.skip('No JavaScript package files (bower.json or package.json)')
+
+    js_packages = defaultdict(set)
+
+    for f in files:
+        if not os.path.exists(f):
+            continue
+        contents = json.loads(io.open(f).read())
+        for package_name, version in contents['dependencies'].items():
+            # Normalize underscores to dashes
+            package_name = package_name.replace('_', '-')
+            js_packages[package_name].add(version)
+
+    for package_name, versions in js_packages.items():
+        # Check for multiple different versions installed
+        if len(versions) > 1:
+            raise AssertionError(
+                'Multiple different versions of a package are installed by '
+                'different JavaScript package managers:\n'
+                '  Package: {}\n'
+                '  Installed versions: {}\n'
+                'Make sure bower.json and package.json agree!'.format(
+                    package_name,
+                    ', '.join(sorted(versions)),
+                ),
+            )
+
+        # Check against Python version
+        version, = versions
         if package_name in installed_things:
             python_version = installed_things[package_name].version
-            if python_version != bower_version:
+            if python_version != version:
                 raise AssertionError(
-                    'Versions in python do not agree with bower versions:\n'
-                    'Package: {}\n'
-                    'Bower: {}\n'
-                    'Python: {}'.format(
-                        package_name, bower_version, python_version,
+                    'Versions in python do not agree with JavaScript versions:\n'  # noqa
+                    '  Package: {}\n'
+                    '  JavaScript: {}\n'
+                    '  Python: {}'.format(
+                        package_name, version, python_version,
                     )
                 )
 
