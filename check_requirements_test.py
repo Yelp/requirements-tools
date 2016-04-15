@@ -542,19 +542,19 @@ def test_test_no_underscores_all_dashes_error():
 
 
 @pytest.mark.usefixtures('in_tmpdir')
-def test_test_bower_package_versions_no_bower_versions():
+def test_test_javascript_package_versions_no_bower_versions():
     write_file('bower.json', '{"dependencies": {}}')
     # Should not raise
-    main.test_bower_package_versions()
+    main.test_javascript_package_versions()
 
 
 @pytest.mark.usefixtures('in_tmpdir')
-def test_test_bower_package_versions_matching():
+def test_test_javascript_package_versions_matching():
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
     # Contrived, but let's assume flake8 is a bower package
     write_file('bower.json', '{"dependencies": {"flake8": "2.5.4"}}')
     # Should not raise
-    main.test_bower_package_versions()
+    main.test_javascript_package_versions()
 
 
 @pytest.mark.usefixtures('in_tmpdir')
@@ -562,22 +562,45 @@ def test_test_bower_package_irrelevant_version():
     # I hope we don't install a python package named jquery any time soon :)
     write_file('bower.json', '{"dependencies": {"jquery": "1.10.0"}}')
     # Should not raise
-    main.test_bower_package_versions()
+    main.test_javascript_package_versions()
 
 
 @pytest.mark.usefixtures('in_tmpdir')
-def test_test_bower_package_versions_not_matching():
+@pytest.mark.parametrize('js_file', ['bower.json', 'package.json'])
+def test_test_javascript_package_versions_not_matching_python(js_file):
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
-    # Again, contrived, but let's assume flake8 is a bower package
-    write_file('bower.json', '{"dependencies": {"flake8": "0.0.0"}}')
+    # Again, contrived, but let's assume flake8 is a bower and/or npm package
+    write_file(js_file, '{"dependencies": {"flake8": "0.0.0"}}')
     with pytest.raises(AssertionError) as excinfo:
-        main.test_bower_package_versions()
+        main.test_javascript_package_versions()
     assert excinfo.value.args == (
-        'Versions in python do not agree with bower versions:\n'
-        'Package: flake8\n'
-        'Bower: 0.0.0\n'
-        'Python: 2.5.4',
+        'Versions in python do not agree with JavaScript versions:\n'
+        '  Package: flake8\n'
+        '  JavaScript: 0.0.0\n'
+        '  Python: 2.5.4',
     )
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_test_javascript_package_versions_conflicting_bower_and_npm_versions():
+    write_file('bower.json', '{"dependencies": {"left-pad": "0.0.1"}}')
+    write_file('package.json', '{"dependencies": {"left-pad": "0.0.2"}}')
+    with pytest.raises(AssertionError) as excinfo:
+        main.test_javascript_package_versions()
+    assert excinfo.value.args == (
+        'Multiple different versions of a package are installed by '
+        'different JavaScript package managers:\n'
+        '  Package: left-pad\n'
+        '  Installed versions: 0.0.1, 0.0.2\n'
+        'Make sure bower.json and package.json agree!',
+    )
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_test_javascript_package_versions_agreeable_bower_and_npm_versions():
+    write_file('bower.json', '{"dependencies": {"left-pad": "0.0.2"}}')
+    write_file('package.json', '{"dependencies": {"left-pad": "0.0.2"}}')
+    main.test_javascript_package_versions()
 
 
 @pytest.mark.usefixtures('in_tmpdir')
