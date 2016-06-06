@@ -311,16 +311,16 @@ def test_javascript_package_versions():
     """Make sure package.json and bower.json versions agree with each other,
     and with the Python versions.
     """
-    files = ['bower.json', 'package.json']
-    if not any(os.path.exists(f) for f in files):  # pragma: no cover
+    paths = ['bower.json', 'package.json']
+    if not any(os.path.exists(path) for path in paths):  # pragma: no cover
         pytest.skip('No JavaScript package files (bower.json or package.json)')
 
     js_packages = defaultdict(set)
 
-    for f in files:
-        if not os.path.exists(f):
+    for path in paths:
+        if not os.path.exists(path):
             continue
-        with io.open(f):
+        with io.open(path) as f:
             contents = json.load(f)
         for package_name, version in contents['dependencies'].items():
             # Normalize underscores to dashes
