@@ -6,6 +6,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import subprocess
 
 import mock
@@ -686,7 +687,7 @@ def test_bower_format_unpinned_requirements():
 
 
 @contextlib.contextmanager
-def bower_returns(this):
+def subprocess_returns(this):
     with mock.patch.object(
         subprocess, 'check_output',
         return_value=json.dumps(this).encode('UTF-8'),
@@ -694,10 +695,15 @@ def bower_returns(this):
         yield
 
 
+def uncolor(text):
+    text = re.sub('\033\\[[^A-z]*[A-z]', '', text)
+    return re.sub('[^\n\r]*\r', '', text)
+
+
 @pytest.mark.usefixtures('in_tmpdir')
 def test_all_bower_packages_pinned_passing(passing_bower_list):
     write_file('bower.json', '{}')
-    with bower_returns(passing_bower_list):
+    with subprocess_returns(passing_bower_list):
         main.test_all_bower_packages_pinned()
 
 
@@ -705,10 +711,268 @@ def test_all_bower_packages_pinned_passing(passing_bower_list):
 def test_all_bower_packages_pinned_failing(failing_bower_list):
     write_file('bower.json', '{}')
     with pytest.raises(AssertionError) as excinfo:
-        with bower_returns(failing_bower_list):
+        with subprocess_returns(failing_bower_list):
             main.test_all_bower_packages_pinned()
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
         '\tjquery (required by "flot": "0.8.3" in bower.json)\n'
         '\t\tmaybe you want "jquery": "2.2.1"?',
     )
+
+
+@pytest.mark.parametrize('tree,expected', [
+    (
+        {'name': 'www_pages', 'dependencies': {}},
+        {},
+    ),
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {'closure_compiler': {'version': '1.0'}},
+        },
+        {
+            'closure_compiler': {'1.0': {'www_pages@*'}},
+        },
+    ),
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'closure_compiler': {
+                    'version': '1.0',
+                    'dependencies': {'closure_externs': {'version': '2.0'}}
+                },
+            },
+        },
+        {
+            'closure_compiler': {'1.0': {'www_pages@*'}},
+            'closure_externs': {'2.0': {'closure_compiler@1.0'}},
+        },
+    ),
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'closure_compiler': {
+                    'version': '1.0',
+                    'dependencies': {'closure_externs': {'version': '2.0'}}
+                },
+                'closure_externs': {'version': '2.0'},
+            },
+        },
+        {
+            'closure_compiler': {'1.0': {'www_pages@*'}},
+            'closure_externs': {
+                '2.0': {'closure_compiler@1.0', 'www_pages@*'},
+            },
+        },
+    ),
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'closure_compiler': {
+                    'version': '1.0',
+                    'dependencies': {'closure_externs': {'version': '2.0'}}
+                },
+                'closure_externs': {'version': '3.0'},
+            },
+        },
+        {
+            'closure_compiler': {'1.0': {'www_pages@*'}},
+            'closure_externs': {
+                '2.0': {'closure_compiler@1.0'},
+                '3.0': {'www_pages@*'},
+            },
+        },
+    ),
+    # jquery tree should be ignored entirely
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'jquery': {
+                    'version': '1.0',
+                    'dependencies': {'closure_externs': {'version': '2.0'}}
+                },
+            },
+        },
+        {},
+    ),
+])
+def test_parse_npm_dependency_tree(tree, expected):
+    assert main.parse_npm_dependency_tree(tree) == expected
+
+
+@pytest.mark.parametrize('tree,package_json', [
+    (
+        {'name': 'www_pages', 'dependencies': {}},
+        {'dependencies': {}},
+    ),
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'closure_compiler': {
+                    'version': '1.0',
+                    'dependencies': {'closure_externs': {'version': '2.0'}},
+                },
+            },
+        },
+        {
+            'dependencies': {
+                'closure_compiler': '1.0',
+                'closure_externs': '2.0',
+            }
+        },
+    ),
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'closure_compiler': {
+                    'version': '1.0',
+                    'dependencies': {'closure_externs': {'version': '2.0'}},
+                },
+                'closure_externs': {'version': '2.0'},
+            },
+        },
+        {
+            'dependencies': {
+                'closure_compiler': '1.0',
+                'closure_externs': '2.0',
+            }
+        },
+    ),
+])
+def test_test_all_npm_packages_pinned_success(tree, package_json, tmpdir):
+    with subprocess_returns(tree), tmpdir.as_cwd():
+        with tmpdir.join('package.json').open('w') as f:
+            json.dump(package_json, f)
+        main.test_all_npm_packages_pinned()
+
+
+@pytest.mark.parametrize('tree,package_json,error', [
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {'closure_compiler': {'version': '1.0'}},
+        },
+        {'dependencies': {}},
+        (
+            'Unpinned requirements detected!\n'
+            '    closure_compiler@1.0 from www_pages@*<-(package.json)'
+        ),
+    ),
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'closure_compiler': {
+                    'version': '1.0',
+                    'dependencies': {
+                        'closure_externs': {
+                            'version': '2.0',
+                            'dependencies': {
+                                'left-pad': {'version': '3.0'},
+                            }
+                        }
+                    }
+                },
+            },
+        },
+        {'dependencies': {'closure_externs': '2.0'}},
+        (
+            'Unpinned requirements detected!\n'
+            '    closure_compiler@1.0 from www_pages@*<-(package.json)\n'
+            '    left-pad@3.0 from closure_externs@2.0<-closure_compiler@1.0<-www_pages@*<-(package.json)'  # noqa
+        ),
+    ),
+])
+def test_test_all_npm_packages_pinned_failure(
+        tree,
+        package_json,
+        error,
+        tmpdir,
+):
+    with subprocess_returns(tree), tmpdir.as_cwd():
+        with tmpdir.join('package.json').open('w') as f:
+            json.dump(package_json, f)
+        with pytest.raises(AssertionError) as excinfo:
+            main.test_all_npm_packages_pinned()
+    assert uncolor(excinfo.value.args[0]) == error
+
+
+@pytest.mark.parametrize('tree,package_json', [
+    (
+        {'name': 'www_pages', 'dependencies': {}},
+        {'dependencies': {}},
+    ),
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'closure_compiler': {
+                    'version': '1.0',
+                    'dependencies': {'closure_externs': {'version': '2.0'}},
+                },
+                'closure_externs': {'version': '2.0'},
+            },
+        },
+        {
+            'dependencies': {}
+        },
+    ),
+])
+def test_test_no_conflicting_npm_package_versions_success(
+        tree,
+        package_json,
+        tmpdir,
+):
+    with subprocess_returns(tree), tmpdir.as_cwd():
+        with tmpdir.join('package.json').open('w') as f:
+            json.dump(package_json, f)
+        main.test_no_conflicting_npm_package_versions()
+
+
+@pytest.mark.parametrize('tree,package_json,error', [
+    (
+        {
+            'name': 'www_pages',
+            'dependencies': {
+                'closure_compiler': {
+                    'version': '4.0',
+                    'dependencies': {'closure_externs': {'version': '1.0'}},
+                },
+                'closure_externs': {
+                    'version': '2.0',
+                    'dependencies': {
+                        'closure_compiler': {'version': '9.999'},
+                    },
+                }
+            },
+        },
+        {'dependencies': {}},
+        (
+            'Conflicting NPM package requirements detected!\n'
+            '  closure_compiler needs multiple versions:\n'
+            '    4.0 from (package.json)\n'
+            '    9.999 from www_pages@*<-(package.json)\n'
+            '  closure_externs needs multiple versions:\n'
+            '    1.0 from www_pages@*<-(package.json)\n'
+            '    2.0 from (package.json)'
+        ),
+    ),
+])
+def test_test_no_conflicting_npm_package_versions_failure(
+        tree,
+        package_json,
+        error,
+        tmpdir,
+):
+    with subprocess_returns(tree), tmpdir.as_cwd():
+        with tmpdir.join('package.json').open('w') as f:
+            json.dump(package_json, f)
+        with pytest.raises(AssertionError) as excinfo:
+            main.test_no_conflicting_npm_package_versions()
+    assert uncolor(excinfo.value.args[0]) == error
