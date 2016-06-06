@@ -861,7 +861,7 @@ def test_test_all_npm_packages_pinned_success(tree, package_json, tmpdir):
         {'dependencies': {}},
         (
             'Unpinned requirements detected!\n'
-            '    closure_compiler@1.0 from www_pages@*<-(package.json)'
+            '    closure_compiler@1.0 <-www_pages@*'
         ),
     ),
     (
@@ -884,8 +884,8 @@ def test_test_all_npm_packages_pinned_success(tree, package_json, tmpdir):
         {'dependencies': {'closure_externs': '2.0'}},
         (
             'Unpinned requirements detected!\n'
-            '    closure_compiler@1.0 from www_pages@*<-(package.json)\n'
-            '    left-pad@3.0 from closure_externs@2.0<-closure_compiler@1.0<-www_pages@*<-(package.json)'  # noqa
+            '    closure_compiler@1.0 <-www_pages@*\n'
+            '    left-pad@3.0 <-closure_externs@2.0<-closure_compiler@1.0<-www_pages@*'  # noqa
         ),
     ),
 ])
@@ -956,11 +956,11 @@ def test_test_no_conflicting_npm_package_versions_success(
         (
             'Conflicting NPM package requirements detected!\n'
             '  closure_compiler needs multiple versions:\n'
-            '    4.0 from (package.json)\n'
-            '    9.999 from www_pages@*<-(package.json)\n'
+            '    closure_compiler@4.0 <-www_pages@*\n'
+            '    closure_compiler@9.999 <-closure_externs@2.0<-www_pages@*\n'
             '  closure_externs needs multiple versions:\n'
-            '    1.0 from www_pages@*<-(package.json)\n'
-            '    2.0 from (package.json)'
+            '    closure_externs@1.0 <-closure_compiler@4.0<-www_pages@*\n'
+            '    closure_externs@2.0 <-www_pages@*'
         ),
     ),
 ])

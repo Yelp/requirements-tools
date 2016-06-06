@@ -320,7 +320,8 @@ def test_javascript_package_versions():
     for f in files:
         if not os.path.exists(f):
             continue
-        contents = json.load(io.open(f))
+        with io.open(f):
+            contents = json.load(f)
         for package_name, version in contents['dependencies'].items():
             # Normalize underscores to dashes
             package_name = package_name.replace('_', '-')
@@ -468,11 +469,11 @@ def parse_npm_dependency_tree(tree):
 def npm_installed_reason(npm_list, package, version):
     """Return string for why a package is installed."""
     if package not in npm_list:
-        return '(package.json)'
+        return ''
 
     wanted_by = npm_list[package][version]
     first_wanter = sorted(wanted_by)[0]
-    return '{}<-{}'.format(
+    return '<-{}{}'.format(
         first_wanter,
         npm_installed_reason(npm_list, *first_wanter.split('@')),
     )
@@ -498,7 +499,7 @@ def test_all_npm_packages_pinned():
     for name, versions in npm_list.items():
         version = sorted(versions.keys())[0]
         if package_json['dependencies'].get(name) != version:
-            unpinned.add('{} from {}'.format(
+            unpinned.add('{} {}'.format(
                 bold('{}@{}'.format(name, version)),
                 npm_installed_reason(npm_list, name, version),
             ))
@@ -530,11 +531,12 @@ def test_no_conflicting_npm_package_versions():
                 '{} needs multiple versions:\n    {}'.format(
                     bold(name),
                     '\n    '.join(
-                        '{} from {}'.format(
-                            bold(version),
+                        '{} {}'.format(
+                            bold('{}@{}'.format(name, version)),
                             npm_installed_reason(
                                 npm_list,
-                                *sorted(why)[0].split('@')
+                                name,
+                                version,
                             ),
                         )
                         for version, why in sorted(versions.items())
