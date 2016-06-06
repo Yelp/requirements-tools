@@ -5,12 +5,12 @@ all: venv test
 
 .PHONY: venv
 venv: .venv.touch
-	tox -e venv $(REBUILD_FLAG)
+	tox2 -e venv $(REBUILD_FLAG)
 
 .PHONY: tests test
 tests: test
 test: .venv.touch
-	tox $(REBUILD_FLAG)
+	tox2 $(REBUILD_FLAG)
 
 .venv.touch: setup.py requirements-dev.txt
 	$(eval REBUILD_FLAG := --recreate)
