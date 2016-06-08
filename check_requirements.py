@@ -490,9 +490,10 @@ def test_all_npm_packages_pinned():
     if not os.path.exists('package.json'):  # pragma: no cover
         pytest.skip('No package.json file')
 
-    npm_list = parse_npm_dependency_tree(json.loads(subprocess.check_output((
-        'npm', 'list', '--json', '--prod',
-    )).decode('UTF-8')))
+    npm_list = parse_npm_dependency_tree(json.loads(subprocess.check_output(
+        ('npm', 'list', '--json', '--prod'),
+        stderr=open(os.devnull, 'w'),
+    ).decode('UTF-8')))
 
     package_json = json.load(io.open('package.json'))
     unpinned = set()
@@ -520,9 +521,10 @@ def test_no_conflicting_npm_package_versions():
     if not os.path.exists('package.json'):  # pragma: no cover
         pytest.skip('No package.json file')
 
-    npm_list = parse_npm_dependency_tree(json.loads(subprocess.check_output((
-        'npm', 'list', '--json', '--prod',
-    )).decode('UTF-8')))
+    npm_list = parse_npm_dependency_tree(json.loads(subprocess.check_output(
+        ('npm', 'list', '--json', '--prod'),
+        stderr=open(os.devnull, 'w'),
+    ).decode('UTF-8')))
 
     duplicates = set()
     for name, versions in npm_list.items():
