@@ -553,7 +553,7 @@ def test_test_javascript_package_versions_no_bower_versions():
 def test_test_javascript_package_versions_matching():
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
     # Contrived, but let's assume flake8 is a bower package
-    write_file('bower.json', '{"dependencies": {"flake8": "2.5.4"}}')
+    write_file('bower.json', '{"dependencies": {"flake8": "2.5.5"}}')
     # Should not raise
     main.test_javascript_package_versions()
 
@@ -578,7 +578,7 @@ def test_test_javascript_package_versions_not_matching_python(js_file):
         'Versions in python do not agree with JavaScript versions:\n'
         '  Package: flake8\n'
         '  JavaScript: 0.0.0\n'
-        '  Python: 2.5.4',
+        '  Python: 2.5.5',
     )
 
 
