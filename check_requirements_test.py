@@ -106,7 +106,7 @@ def test_unpinned_things():
     ret = main.find_unpinned_requirements(((flake8req, 'reqs.txt'),))
     assert ret == {
         ('mccabe', flake8req, 'reqs.txt'),
-        ('pep8', flake8req, 'reqs.txt'),
+        ('pycodestyle', flake8req, 'reqs.txt'),
         ('pyflakes', flake8req, 'reqs.txt'),
     }
 
@@ -118,11 +118,11 @@ def test_format_unpinned_requirements():
     ret = main.format_unpinned_requirements(unpinned)
     assert ret == (
         "\tmccabe (required by flake8==2.3.0 in reqs.txt)\n"
-        '\t\tmaybe you want "mccabe==0.4.0"?\n'
-        "\tpep8 (required by flake8==2.3.0 in reqs.txt)\n"
-        '\t\tmaybe you want "pep8==1.7.0"?\n'
+        '\t\tmaybe you want "mccabe==0.5.0"?\n'
+        "\tpycodestyle (required by flake8==2.3.0 in reqs.txt)\n"
+        '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
         "\tpyflakes (required by flake8==2.3.0 in reqs.txt)\n"
-        '\t\tmaybe you want "pyflakes==1.0.0"?'
+        '\t\tmaybe you want "pyflakes==1.2.3"?'
     )
 
 
@@ -388,7 +388,7 @@ def test_test_requirements_pinned_all_pinned():
     write_file(
         'requirements.txt',
         'flake8==2.3.0\n'
-        'pep8==1.6.1\n'
+        'pycodestyle==2.0.0\n'
         'mccabe==0.3\n'
         'pyflakes==0.8.1\n'
     )
@@ -402,7 +402,7 @@ def test_test_requirements_pinned_all_pinned_dev_only():
     write_file(
         'requirements-dev.txt',
         'flake8==2.3.0\n'
-        'pep8==1.6.1\n'
+        'pycodestyle==2.0.0\n'
         'mccabe==0.3\n'
         'pyflakes==0.8.1\n'
     )
@@ -425,11 +425,11 @@ def test_test_requirements_pinned_missing_some():
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "mccabe==0.4.0"?\n'
-        '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "pep8==1.7.0"?\n'
+        '\t\tmaybe you want "mccabe==0.5.0"?\n'
+        '\tpycodestyle (required by flake8==2.3.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
         '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "pyflakes==1.0.0"?',
+        '\t\tmaybe you want "pyflakes==1.2.3"?',
     )
 
 
@@ -454,11 +454,11 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
         '\tlazy-object-proxy (required by astroid==1.4.5 in requirements-dev.txt)\n'  # noqa
         '\t\tmaybe you want "lazy-object-proxy==1.2.2"?\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "mccabe==0.4.0"?\n'
-        '\tpep8 (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "pep8==1.7.0"?\n'
+        '\t\tmaybe you want "mccabe==0.5.0"?\n'
+        '\tpycodestyle (required by flake8==2.3.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
         '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "pyflakes==1.0.0"?\n'
+        '\t\tmaybe you want "pyflakes==1.2.3"?\n'
         '\tsix (required by astroid==1.4.5 in requirements-dev.txt)\n'
         '\t\tmaybe you want "six==1.10.0"?\n'
         '\twrapt (required by astroid==1.4.5 in requirements-dev.txt)\n'
@@ -489,7 +489,7 @@ def test_get_pinned_versions_from_requirement():
     result = sorted(result)
     split = [req.split('==') for req in result]
     packages = [package for package, _ in split]
-    assert packages == ['mccabe', 'pep8', 'pyflakes']
+    assert packages == ['mccabe', 'pycodestyle', 'pyflakes']
 
 
 def test_get_pinned_versions_from_requirement_circular():
@@ -553,7 +553,7 @@ def test_test_javascript_package_versions_no_bower_versions():
 def test_test_javascript_package_versions_matching():
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
     # Contrived, but let's assume flake8 is a bower package
-    write_file('bower.json', '{"dependencies": {"flake8": "2.5.5"}}')
+    write_file('bower.json', '{"dependencies": {"flake8": "2.6.0"}}')
     # Should not raise
     main.test_javascript_package_versions()
 
@@ -578,7 +578,7 @@ def test_test_javascript_package_versions_not_matching_python(js_file):
         'Versions in python do not agree with JavaScript versions:\n'
         '  Package: flake8\n'
         '  JavaScript: 0.0.0\n'
-        '  Python: 2.5.5',
+        '  Python: 2.6.0',
     )
 
 
