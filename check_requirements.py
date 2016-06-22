@@ -322,7 +322,7 @@ def test_javascript_package_versions():
             continue
         with io.open(path) as f:
             contents = json.load(f)
-        for package_name, version in contents['dependencies'].items():
+        for package_name, version in contents.get('dependencies', {}).items():
             # Normalize underscores to dashes
             package_name = package_name.replace('_', '-')
             js_packages[package_name].add(version)

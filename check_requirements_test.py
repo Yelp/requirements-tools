@@ -976,3 +976,16 @@ def test_test_no_conflicting_npm_package_versions_failure(
         with pytest.raises(AssertionError) as excinfo:
             main.test_no_conflicting_npm_package_versions()
     assert uncolor(excinfo.value.args[0]) == error
+
+
+@pytest.mark.usefixtures('in_tmpdir')
+def test_test_javascript_tests_pass_with_no_dependencies_key():
+    write_file('bower.json', '{"name": "derp"}')
+    write_file('package.json', '{"private": true}')
+
+    # Should not raise
+    main.test_javascript_package_versions()
+    main.test_no_conflicting_npm_package_versions()
+    main.test_all_npm_packages_pinned()
+    main.test_all_bower_packages_pinned()
+    main.test_no_conflicting_npm_package_versions()
