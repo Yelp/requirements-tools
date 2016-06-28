@@ -575,10 +575,11 @@ def test_test_javascript_package_versions_not_matching_python(js_file):
     with pytest.raises(AssertionError) as excinfo:
         main.test_javascript_package_versions()
     assert excinfo.value.args == (
-        'Versions in python do not agree with JavaScript versions:\n'
-        '  Package: flake8\n'
-        '  JavaScript: 0.0.0\n'
-        '  Python: 2.6.2',
+        'The package "flake8" is both a JavaScript and Python package.\n'  # noqa
+        "The version installed by Python must match the JavaScript version, but it currently doesn't!\n"  # noqa
+        '  JavaScript version: 0.0.0\n'
+        '  Python version: 2.6.2\n'
+        'Check requirements.txt and package.json/bower.json!',
     )
 
 

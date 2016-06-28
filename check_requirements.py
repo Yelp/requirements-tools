@@ -347,10 +347,11 @@ def test_javascript_package_versions():
             python_version = installed_things[package_name].version
             if python_version != version:
                 raise AssertionError(
-                    'Versions in python do not agree with JavaScript versions:\n'  # noqa
-                    '  Package: {}\n'
-                    '  JavaScript: {}\n'
-                    '  Python: {}'.format(
+                    'The package "{}" is both a JavaScript and Python package.\n'  # noqa
+                    "The version installed by Python must match the JavaScript version, but it currently doesn't!\n"  # noqa
+                    '  JavaScript version: {}\n'
+                    '  Python version: {}\n'
+                    'Check requirements.txt and package.json/bower.json!'.format(  # noqa
                         package_name, version, python_version,
                     )
                 )
