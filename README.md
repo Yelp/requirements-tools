@@ -13,7 +13,7 @@ run as part of your project's tests.
 
 * Checks for requirements in `setup.py` but not in `requirements.txt`
 
-* Checks for consistency between `requirements.txt` and `bower.json` (if one
+* Checks for consistency between `requirements.txt` and `package.json` (if one
   exists)
 
 * Checks for dashes instead of underscores in requirement names
@@ -56,9 +56,9 @@ The recommended layout for your project is:
   `pip freeze`, and subtracting out common requirements already in
   `requirements.txt`.
 
-* `bower.json` (for frontend services only) should list strictly-pinned
-  dependencies. For packages which provide both a Python and bower package
-  (e.g. `yelp\_styleguide`), those versions should match the versions in
+* `package.json` (for frontend services only) should list strictly-pinned
+  dependencies. For packages which provide both a Python and an npm package
+  (e.g. `yelp-styleguide`), those versions should match the versions in
   `requirements.txt`.
 
 All of these files should be checked into your project.
