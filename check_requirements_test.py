@@ -118,7 +118,7 @@ def test_format_unpinned_requirements():
     ret = main.format_unpinned_requirements(unpinned)
     assert ret == (
         "\tmccabe (required by flake8==2.3.0 in reqs.txt)\n"
-        '\t\tmaybe you want "mccabe==0.5.1"?\n'
+        '\t\tmaybe you want "mccabe==0.5.2"?\n'
         "\tpycodestyle (required by flake8==2.3.0 in reqs.txt)\n"
         '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
         "\tpyflakes (required by flake8==2.3.0 in reqs.txt)\n"
@@ -425,7 +425,7 @@ def test_test_requirements_pinned_missing_some():
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "mccabe==0.5.1"?\n'
+        '\t\tmaybe you want "mccabe==0.5.2"?\n'
         '\tpycodestyle (required by flake8==2.3.0 in requirements.txt)\n'
         '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
         '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
@@ -454,7 +454,7 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
         '\tlazy-object-proxy (required by astroid==1.4.5 in requirements-dev.txt)\n'  # noqa
         '\t\tmaybe you want "lazy-object-proxy==1.2.2"?\n'
         '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "mccabe==0.5.1"?\n'
+        '\t\tmaybe you want "mccabe==0.5.2"?\n'
         '\tpycodestyle (required by flake8==2.3.0 in requirements.txt)\n'
         '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
         '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
