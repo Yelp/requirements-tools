@@ -16,11 +16,6 @@ import pytest
 import check_requirements as main
 
 
-def write_file(filename, contents):
-    with io.open(filename, 'w') as f:
-        f.write(contents)
-
-
 @pytest.mark.parametrize(
     ('reqin', 'reqout'),
     (
@@ -37,36 +32,34 @@ def test_parse_requirement(reqin, reqout):
 
 
 def test_get_lines_from_file_trivial(tmpdir):
-    tmpfile = tmpdir.join('foo').strpath
-    write_file(tmpfile, '')
-    assert main.get_lines_from_file(tmpfile) == []
+    tmpfile = tmpdir.join('foo').ensure()
+    assert main.get_lines_from_file(tmpfile.strpath) == []
 
 
 def test_get_lines_from_file_ignores_comments(tmpdir):
-    tmpfile = tmpdir.join('foo').strpath
-    write_file(tmpfile, 'foo\n#bar\nbaz')
-    assert main.get_lines_from_file(tmpfile) == ['foo', 'baz']
+    tmpfile = tmpdir.join('foo')
+    tmpfile.write('foo\n#bar\nbaz')
+    assert main.get_lines_from_file(tmpfile.strpath) == ['foo', 'baz']
 
 
 def test_get_lines_from_file_strips_ws(tmpdir):
-    tmpfile = tmpdir.join('foo').strpath
-    write_file(tmpfile, ' foo \n    \n \tbaz')
-    assert main.get_lines_from_file(tmpfile) == ['foo', 'baz']
+    tmpfile = tmpdir.join('foo')
+    tmpfile.write(' foo \n    \n \tbaz')
+    assert main.get_lines_from_file(tmpfile.strpath) == ['foo', 'baz']
 
 
 def test_get_raw_requirements_trivial(tmpdir):
-    reqs_filename = tmpdir.join('requirements.txt').strpath
-    write_file(reqs_filename, '')
-    assert main.get_raw_requirements(reqs_filename) == []
+    reqs_filename = tmpdir.join('requirements.txt').ensure()
+    assert main.get_raw_requirements(reqs_filename.strpath) == []
 
 
 def test_get_raw_requirements_some_things(tmpdir):
-    reqs_filename = tmpdir.join('requirements.txt').strpath
-    write_file(reqs_filename, '-e .\nfoo==1\nbar==2')
-    requirements = main.get_raw_requirements(reqs_filename)
+    reqs_file = tmpdir.join('requirements.txt')
+    reqs_file.write('-e .\nfoo==1\nbar==2')
+    requirements = main.get_raw_requirements(reqs_file.strpath)
     assert requirements == [
-        (pkg_resources.Requirement.parse('foo==1'), reqs_filename),
-        (pkg_resources.Requirement.parse('bar==2'), reqs_filename),
+        (pkg_resources.Requirement.parse('foo==1'), reqs_file.strpath),
+        (pkg_resources.Requirement.parse('bar==2'), reqs_file.strpath),
     ]
 
 
@@ -180,25 +173,25 @@ def mock_get_raw_requirements_abc():
 
 
 @pytest.mark.usefixtures(
-    'in_tmpdir', 'mock_package_name',
-    'mock_pinned_from_requirement_abc', 'mock_get_raw_requirements_abc',
+    'mock_package_name', 'mock_pinned_from_requirement_abc',
+    'mock_get_raw_requirements_abc',
 )
-def test_test_top_level_dependencies():
+def test_test_top_level_dependencies(in_tmpdir):
     # So we don't skip
-    write_file('setup.py', '')
-    write_file('requirements.txt', '')
+    in_tmpdir.join('setup.py').ensure()
+    in_tmpdir.join('requirements.txt').ensure()
     # Should pass since all are satisfied
     main.test_top_level_dependencies()
 
 
 @pytest.mark.usefixtures(
-    'in_tmpdir', 'mock_package_name',
-    'mock_pinned_from_requirement_abc', 'mock_get_raw_requirements_ab',
+    'mock_package_name', 'mock_pinned_from_requirement_abc',
+    'mock_get_raw_requirements_ab',
 )
-def test_test_top_level_dependencies_too_much_pinned():
+def test_test_top_level_dependencies_too_much_pinned(in_tmpdir):
     # So we don't skip
-    write_file('setup.py', '')
-    write_file('requirements.txt', '')
+    in_tmpdir.join('setup.py').ensure()
+    in_tmpdir.join('requirements.txt').ensure()
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
     assert excinfo.value.args == (
@@ -209,18 +202,18 @@ def test_test_top_level_dependencies_too_much_pinned():
     )
 
 
-@pytest.mark.usefixtures('in_tmpdir')
 @pytest.mark.parametrize('version', ('1.2.3-rc1', '1.2.3rc1'))
-def test_prerelease_name_normalization(version):
-    write_file(
-        'setup.py',
+def test_prerelease_name_normalization(in_tmpdir, version):
+    in_tmpdir.join('setup.py').write(
         'from setuptools import setup\n'
         'setup(\n'
         '    name="depends-on-prerelease-pkg",\n'
         '    install_requires=["prerelease-pkg"],\n'
         ')\n'
     )
-    write_file('requirements.txt', 'prerelease-pkg=={}'.format(version))
+    in_tmpdir.join('requirements.txt').write(
+        'prerelease-pkg=={}'.format(version),
+    )
     main.test_top_level_dependencies()
 
 
@@ -236,7 +229,7 @@ def mocked_package(package_name='pkg', prod_deps=(), dev_deps=()):
             deps = prod_deps
         else:
             deps = dev_deps
-        return set(['=='.join(dep) for dep in deps])
+        return {'=='.join(dep) for dep in deps}
 
     with mock.patch.object(
         main,
@@ -253,11 +246,11 @@ def mocked_package(package_name='pkg', prod_deps=(), dev_deps=()):
         yield
 
 
-@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
-def test_test_top_level_dependencies_no_requirements_dev_minimal():
+@pytest.mark.usefixtures('mock_package_name')
+def test_test_top_level_dependencies_no_requirements_dev_minimal(in_tmpdir):
     """If there's no requirements-dev-minimal.txt, we should suggest you create
     a requirements-dev-minimal.txt but not fail."""
-    write_file('requirements-dev.txt', 'a\nb==3\n')
+    in_tmpdir.join('requirements-dev.txt').write('a\nb==3\n')
     with mocked_package(dev_deps=(('a', '4'), ('b', '3'))):
         with mock.patch.object(main, 'print') as fake_print:
             main.test_top_level_dependencies()  # should not raise
@@ -267,11 +260,11 @@ def test_test_top_level_dependencies_no_requirements_dev_minimal():
     )
 
 
-@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
-def test_test_top_level_dependencies_no_dev_deps_pinned():
+@pytest.mark.usefixtures('mock_package_name')
+def test_test_top_level_dependencies_no_dev_deps_pinned(in_tmpdir):
     """If there's a requirements-dev-minimal.txt but no requirements-dev.txt,
     we should tell you to pin everything there."""
-    write_file('requirements-dev-minimal.txt', 'a\nb\n')
+    in_tmpdir.join('requirements-dev-minimal.txt').write('a\nb\n')
     with mocked_package(dev_deps=(('a', '2'), ('b', '3'))):
         with pytest.raises(AssertionError) as excinfo:
             main.test_top_level_dependencies()
@@ -284,16 +277,16 @@ def test_test_top_level_dependencies_no_dev_deps_pinned():
         )
 
         # and when you do pin it, now the tests pass! :D
-        write_file('requirements-dev.txt', 'a==2\nb==3\n')
+        in_tmpdir.join('requirements-dev.txt').write('a==2\nb==3\n')
         main.test_top_level_dependencies()
 
 
-@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
-def test_test_top_level_dependencies_some_dev_deps_not_pinned():
+@pytest.mark.usefixtures('mock_package_name')
+def test_test_top_level_dependencies_some_dev_deps_not_pinned(in_tmpdir):
     """If there's a requirements-dev-minimal.txt but we're missing stuff in
     requirements-dev.txt, we should tell you to pin more stuff there."""
-    write_file('requirements-dev-minimal.txt', 'a\nb\n')
-    write_file('requirements-dev.txt', 'a==2\n')
+    in_tmpdir.join('requirements-dev-minimal.txt').write('a\nb\n')
+    in_tmpdir.join('requirements-dev.txt').write('a==2\n')
     with mocked_package(dev_deps=(('a', '2'), ('b', '3'))):
         with pytest.raises(AssertionError) as excinfo:
             main.test_top_level_dependencies()
@@ -305,17 +298,17 @@ def test_test_top_level_dependencies_some_dev_deps_not_pinned():
         )
 
         # and when you do pin it, now the tests pass! :D
-        write_file('requirements-dev.txt', 'a==2\nb==3\n')
+        in_tmpdir.join('requirements-dev.txt').write('a==2\nb==3\n')
         main.test_top_level_dependencies()
 
 
-@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
-def test_test_top_level_dependencies_overlapping_prod_dev_deps():
+@pytest.mark.usefixtures('mock_package_name')
+def test_test_top_level_dependencies_overlapping_prod_dev_deps(in_tmpdir):
     """If we have a dep which is both a prod and dev dep, we should complain if
     it appears in requirements-dev.txt."""
-    write_file('requirements-dev-minimal.txt', 'a\n')
-    write_file('requirements.txt', 'a==2\n')
-    write_file('requirements-dev.txt', 'a==2\n')
+    in_tmpdir.join('requirements-dev-minimal.txt').write('a\n')
+    in_tmpdir.join('requirements.txt').write('a==2\n')
+    in_tmpdir.join('requirements-dev.txt').write('a==2\n')
     with mocked_package(prod_deps=[('a', '2')], dev_deps=[('a', '2')]):
         with pytest.raises(AssertionError) as excinfo:
             main.test_top_level_dependencies()
@@ -331,13 +324,13 @@ def test_test_top_level_dependencies_overlapping_prod_dev_deps():
         )
 
 
-@pytest.mark.usefixtures('in_tmpdir', 'mock_package_name')
-def test_test_top_level_dependencies_prod_dep_is_only_in_dev_deps():
+@pytest.mark.usefixtures('mock_package_name')
+def test_test_top_level_dependencies_prod_dep_is_only_in_dev_deps(in_tmpdir):
     """If we've defined a prod dependency only in requirements-dev.txt, we
     should tell the user to put it in requirements.txt instead."""
-    write_file('requirements-dev-minimal.txt', 'a\n')
-    write_file('requirements.txt', '')
-    write_file('requirements-dev.txt', 'a==2\n')
+    in_tmpdir.join('requirements-dev-minimal.txt').write('a\n')
+    in_tmpdir.join('requirements.txt').write('')
+    in_tmpdir.join('requirements-dev.txt').write('a==2\n')
     with mocked_package(prod_deps=[('a', '2')], dev_deps=[('a', '2')]):
         with pytest.raises(AssertionError) as excinfo:
             main.test_top_level_dependencies()
@@ -350,13 +343,13 @@ def test_test_top_level_dependencies_prod_dep_is_only_in_dev_deps():
 
 
 @pytest.mark.usefixtures(
-    'in_tmpdir', 'mock_package_name',
-    'mock_pinned_from_requirement_ab', 'mock_get_raw_requirements_abc',
+    'mock_package_name', 'mock_pinned_from_requirement_ab',
+    'mock_get_raw_requirements_abc',
 )
-def test_test_top_level_dependencies_not_enough_pinned():
+def test_test_top_level_dependencies_not_enough_pinned(in_tmpdir):
     # So we don't skip
-    write_file('setup.py', '')
-    write_file('requirements.txt', '')
+    in_tmpdir.join('setup.py').ensure()
+    in_tmpdir.join('requirements.txt').ensure()
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
     assert excinfo.value.args == (
@@ -368,25 +361,21 @@ def test_test_top_level_dependencies_not_enough_pinned():
     )
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_requirements_pinned_trivial():
-    write_file('requirements.txt', '')
+def test_test_requirements_pinned_trivial(in_tmpdir):
+    in_tmpdir.join('requirements.txt').ensure()
     # Should not raise
     main.test_requirements_pinned()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_requirements_pinned_trivial_with_dev_too():
-    write_file('requirements.txt', '')
-    write_file('requirements-dev.txt', '')
+def test_test_requirements_pinned_trivial_with_dev_too(in_tmpdir):
+    in_tmpdir.join('requirements.txt').ensure()
+    in_tmpdir.join('requirements-dev.txt').ensure()
     # Should not raise
     main.test_requirements_pinned()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_requirements_pinned_all_pinned():
-    write_file(
-        'requirements.txt',
+def test_test_requirements_pinned_all_pinned(in_tmpdir):
+    in_tmpdir.join('requirements.txt').write(
         'flake8==2.3.0\n'
         'pycodestyle==2.0.0\n'
         'mccabe==0.3\n'
@@ -396,11 +385,9 @@ def test_test_requirements_pinned_all_pinned():
     main.test_requirements_pinned()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_requirements_pinned_all_pinned_dev_only():
-    write_file('requirements-dev-minimal.txt', 'flake8==2.3.0')
-    write_file(
-        'requirements-dev.txt',
+def test_test_requirements_pinned_all_pinned_dev_only(in_tmpdir):
+    in_tmpdir.join('requirements-dev-minimal.txt').write('flake8==2.3.0')
+    in_tmpdir.join('requirements-dev.txt').write(
         'flake8==2.3.0\n'
         'pycodestyle==2.0.0\n'
         'mccabe==0.3\n'
@@ -410,16 +397,9 @@ def test_test_requirements_pinned_all_pinned_dev_only():
     main.test_requirements_pinned()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_requirements_pinned_missing_some():
-    write_file(
-        'requirements.txt',
-        'flake8==2.3.0',
-    )
-    write_file(
-        'requirements-dev.txt',
-        'astroid==1.4.3',
-    )
+def test_test_requirements_pinned_missing_some(in_tmpdir):
+    in_tmpdir.join('requirements.txt').write('flake8==2.3.0')
+    in_tmpdir.join('requirements-dev.txt').write('astroid==1.4.3')
     with pytest.raises(AssertionError) as excinfo:
         main.test_requirements_pinned()
     assert excinfo.value.args == (
@@ -433,20 +413,10 @@ def test_test_requirements_pinned_missing_some():
     )
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_requirements_pinned_missing_some_with_dev_reqs():
-    write_file(
-        'requirements.txt',
-        'flake8==2.3.0',
-    )
-    write_file(
-        'requirements-dev.txt',
-        'astroid==1.4.5',
-    )
-    write_file(
-        'requirements-dev-minimal.txt',
-        'astroid',
-    )
+def test_test_requirements_pinned_missing_some_with_dev_reqs(in_tmpdir):
+    in_tmpdir.join('requirements.txt').write('flake8==2.3.0')
+    in_tmpdir.join('requirements-dev.txt').write('astroid==1.4.5')
+    in_tmpdir.join('requirements-dev-minimal.txt').write('astroid')
     with pytest.raises(AssertionError) as excinfo:
         main.test_requirements_pinned()
     assert excinfo.value.args == (
@@ -468,17 +438,14 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs():
 
 @pytest.yield_fixture
 def in_tmpdir(tmpdir):
-    pwd = os.getcwd()
-    os.chdir(tmpdir.strpath)
-    try:
+    with tmpdir.as_cwd():
         yield tmpdir
-    finally:
-        os.chdir(pwd)
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_get_package_name():
-    write_file('setup.py', 'from setuptools import setup\nsetup(name="foo")')
+def test_get_package_name(in_tmpdir):
+    in_tmpdir.join('setup.py').write(
+        'from setuptools import setup\nsetup(name="foo")',
+    )
     assert main.get_package_name() == 'foo'
 
 
@@ -515,63 +482,60 @@ def test_format_versions_on_lines_with_dashes_something():
     )
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_no_underscores_passes_reqs_dev_doesnt_exist():
+def test_test_no_underscores_passes_reqs_dev_doesnt_exist(in_tmpdir):
     """If requirements.txt exists (but not -dev.txt) we shouldn't raise."""
-    write_file('requirements.txt', 'foo==1')
+    in_tmpdir.join('requirements.txt').write('foo==1')
     # Should not raise
     main.test_no_underscores_all_dashes()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_no_underscores_all_dashes_ok():
-    tmpfile = 'tmp'
-    write_file(tmpfile, 'foo==1')
+def test_test_no_underscores_all_dashes_ok(in_tmpdir):
+    tmpfile = in_tmpdir.join('tmp')
+    tmpfile.write('foo==1')
     # Should not raise
-    main.test_no_underscores_all_dashes(requirements_files=(tmpfile,))
+    main.test_no_underscores_all_dashes(requirements_files=(tmpfile.strpath,))
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_no_underscores_all_dashes_error():
-    tmpfile = 'tmp'
-    write_file(tmpfile, 'foo_bar==1')
+def test_test_no_underscores_all_dashes_error(in_tmpdir):
+    tmpfile = in_tmpdir.join('tmp')
+    tmpfile.write('foo_bar==1')
     with pytest.raises(AssertionError) as excinfo:
-        main.test_no_underscores_all_dashes(requirements_files=(tmpfile,))
+        main.test_no_underscores_all_dashes(
+            requirements_files=(tmpfile.strpath,),
+        )
     assert excinfo.value.args == (
-        'Use dashes for package names tmp: foo_bar==1',
+        'Use dashes for package names {}: foo_bar==1'.format(tmpfile.strpath),
     )
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_javascript_package_versions_no_bower_versions():
-    write_file('bower.json', '{"dependencies": {}}')
+def test_test_javascript_package_versions_no_bower_versions(in_tmpdir):
+    in_tmpdir.join('bower.json').write('{"dependencies": {}}')
     # Should not raise
     main.test_javascript_package_versions()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_javascript_package_versions_matching():
+def test_test_javascript_package_versions_matching(in_tmpdir):
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
     # Contrived, but let's assume flake8 is a bower package
-    write_file('bower.json', '{"dependencies": {"flake8": "2.6.2"}}')
+    in_tmpdir.join('bower.json').write('{"dependencies": {"flake8": "2.6.2"}}')
     # Should not raise
     main.test_javascript_package_versions()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_bower_package_irrelevant_version():
-    # I hope we don't install a python package named jquery any time soon :)
-    write_file('bower.json', '{"dependencies": {"jquery": "1.10.0"}}')
+def test_test_bower_package_irrelevant_version(in_tmpdir):
+    # I hope we don't install a python package named herp any time soon :)
+    in_tmpdir.join('bower.json').write('{"dependencies": {"herp": "1.10.0"}}')
     # Should not raise
     main.test_javascript_package_versions()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-@pytest.mark.parametrize('js_file', ['bower.json', 'package.json'])
-def test_test_javascript_package_versions_not_matching_python(js_file):
+@pytest.mark.parametrize('js_file', ('bower.json', 'package.json'))
+def test_test_javascript_package_versions_not_matching_python(
+        in_tmpdir, js_file,
+):
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
     # Again, contrived, but let's assume flake8 is a bower and/or npm package
-    write_file(js_file, '{"dependencies": {"flake8": "0.0.0"}}')
+    in_tmpdir.join(js_file).write('{"dependencies": {"flake8": "0.0.0"}}')
     with pytest.raises(AssertionError) as excinfo:
         main.test_javascript_package_versions()
     assert excinfo.value.args == (
@@ -583,10 +547,15 @@ def test_test_javascript_package_versions_not_matching_python(js_file):
     )
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_javascript_package_versions_conflicting_bower_and_npm_versions():
-    write_file('bower.json', '{"dependencies": {"left-pad": "0.0.1"}}')
-    write_file('package.json', '{"dependencies": {"left-pad": "0.0.2"}}')
+def test_test_javascript_package_versions_conflicting_bower_and_npm_versions(
+        in_tmpdir,
+):
+    in_tmpdir.join('bower.json').write(
+        '{"dependencies": {"left-pad": "0.0.1"}}',
+    )
+    in_tmpdir.join('package.json').write(
+        '{"dependencies": {"left-pad": "0.0.2"}}',
+    )
     with pytest.raises(AssertionError) as excinfo:
         main.test_javascript_package_versions()
     assert excinfo.value.args == (
@@ -598,16 +567,20 @@ def test_test_javascript_package_versions_conflicting_bower_and_npm_versions():
     )
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_javascript_package_versions_agreeable_bower_and_npm_versions():
-    write_file('bower.json', '{"dependencies": {"left-pad": "0.0.2"}}')
-    write_file('package.json', '{"dependencies": {"left-pad": "0.0.2"}}')
+def test_test_javascript_package_versions_agreeable_bower_and_npm_versions(
+        in_tmpdir,
+):
+    in_tmpdir.join('bower.json').write(
+        '{"dependencies": {"left-pad": "0.0.2"}}',
+    )
+    in_tmpdir.join('package.json').write(
+        '{"dependencies": {"left-pad": "0.0.2"}}',
+    )
     main.test_javascript_package_versions()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_check_requirements_is_only_for_applications():
-    write_file('requirements.txt', '')
+def test_check_requirements_is_only_for_applications(in_tmpdir):
+    in_tmpdir.join('requirements.txt').ensure()
     main.check_requirements_is_only_for_applications()
 
 
@@ -701,16 +674,14 @@ def uncolor(text):
     return re.sub('[^\n\r]*\r', '', text)
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_all_bower_packages_pinned_passing(passing_bower_list):
-    write_file('bower.json', '{}')
+def test_all_bower_packages_pinned_passing(in_tmpdir, passing_bower_list):
+    in_tmpdir.join('bower.json').write('{}')
     with subprocess_returns(passing_bower_list):
         main.test_all_bower_packages_pinned()
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_all_bower_packages_pinned_failing(failing_bower_list):
-    write_file('bower.json', '{}')
+def test_all_bower_packages_pinned_failing(in_tmpdir, failing_bower_list):
+    in_tmpdir.join('bower.json').write('{}')
     with pytest.raises(AssertionError) as excinfo:
         with subprocess_returns(failing_bower_list):
             main.test_all_bower_packages_pinned()
@@ -721,7 +692,7 @@ def test_all_bower_packages_pinned_failing(failing_bower_list):
     )
 
 
-@pytest.mark.parametrize('tree,expected', [
+@pytest.mark.parametrize('tree,expected', (
     (
         {'name': 'www_pages', 'dependencies': {}},
         {},
@@ -800,12 +771,12 @@ def test_all_bower_packages_pinned_failing(failing_bower_list):
         },
         {},
     ),
-])
+))
 def test_parse_npm_dependency_tree(tree, expected):
     assert main.parse_npm_dependency_tree(tree) == expected
 
 
-@pytest.mark.parametrize('tree,package_json', [
+@pytest.mark.parametrize('tree,package_json', (
     (
         {'name': 'www_pages', 'dependencies': {}},
         {'dependencies': {}},
@@ -845,7 +816,7 @@ def test_parse_npm_dependency_tree(tree, expected):
             }
         },
     ),
-])
+))
 def test_test_all_npm_packages_pinned_success(tree, package_json, tmpdir):
     with subprocess_returns(tree), tmpdir.as_cwd():
         with tmpdir.join('package.json').open('w') as f:
@@ -853,7 +824,7 @@ def test_test_all_npm_packages_pinned_success(tree, package_json, tmpdir):
         main.test_all_npm_packages_pinned()
 
 
-@pytest.mark.parametrize('tree,package_json,error', [
+@pytest.mark.parametrize('tree,package_json,error', (
     (
         {
             'name': 'www_pages',
@@ -889,7 +860,7 @@ def test_test_all_npm_packages_pinned_success(tree, package_json, tmpdir):
             '    left-pad@3.0 <-closure_externs@2.0<-closure_compiler@1.0<-www_pages@*'  # noqa
         ),
     ),
-])
+))
 def test_test_all_npm_packages_pinned_failure(
         tree,
         package_json,
@@ -904,7 +875,7 @@ def test_test_all_npm_packages_pinned_failure(
     assert uncolor(excinfo.value.args[0]) == error
 
 
-@pytest.mark.parametrize('tree,package_json', [
+@pytest.mark.parametrize('tree,package_json', (
     (
         {'name': 'www_pages', 'dependencies': {}},
         {'dependencies': {}},
@@ -924,7 +895,7 @@ def test_test_all_npm_packages_pinned_failure(
             'dependencies': {}
         },
     ),
-])
+))
 def test_test_no_conflicting_npm_package_versions_success(
         tree,
         package_json,
@@ -936,7 +907,7 @@ def test_test_no_conflicting_npm_package_versions_success(
         main.test_no_conflicting_npm_package_versions()
 
 
-@pytest.mark.parametrize('tree,package_json,error', [
+@pytest.mark.parametrize('tree,package_json,error', (
     (
         {
             'name': 'www_pages',
@@ -964,7 +935,7 @@ def test_test_no_conflicting_npm_package_versions_success(
             '    closure_externs@2.0 <-www_pages@*'
         ),
     ),
-])
+))
 def test_test_no_conflicting_npm_package_versions_failure(
         tree,
         package_json,
@@ -979,10 +950,9 @@ def test_test_no_conflicting_npm_package_versions_failure(
     assert uncolor(excinfo.value.args[0]) == error
 
 
-@pytest.mark.usefixtures('in_tmpdir')
-def test_test_javascript_tests_pass_with_no_dependencies_key():
-    write_file('bower.json', '{"name": "derp"}')
-    write_file('package.json', '{"private": true}')
+def test_test_javascript_tests_pass_with_no_dependencies_key(in_tmpdir):
+    in_tmpdir.join('bower.json').write('{"name": "derp"}')
+    in_tmpdir.join('package.json').write('{"private": true}')
 
     # Should not raise
     main.test_javascript_package_versions()
