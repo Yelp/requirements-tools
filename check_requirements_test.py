@@ -3,9 +3,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import contextlib
-import io
 import json
-import os
 import re
 import subprocess
 
@@ -508,34 +506,35 @@ def test_test_no_underscores_all_dashes_error(in_tmpdir):
     )
 
 
-def test_test_javascript_package_versions_no_bower_versions(in_tmpdir):
-    in_tmpdir.join('bower.json').write('{"dependencies": {}}')
+def test_test_javascript_package_versions_no_npm_versions(in_tmpdir):
+    in_tmpdir.join('package.json').write('{"dependencies": {}}')
     # Should not raise
     main.test_javascript_package_versions()
 
 
 def test_test_javascript_package_versions_matching(in_tmpdir):
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
-    # Contrived, but let's assume flake8 is a bower package
-    in_tmpdir.join('bower.json').write('{"dependencies": {"flake8": "2.6.2"}}')
+    # Contrived, but let's assume flake8 is an npm package
+    in_tmpdir.join('package.json').write(
+        '{"dependencies": {"flake8": "2.6.2"}}',
+    )
     # Should not raise
     main.test_javascript_package_versions()
 
 
-def test_test_bower_package_irrelevant_version(in_tmpdir):
+def test_test_npm_package_irrelevant_version(in_tmpdir):
     # I hope we don't install a python package named herp any time soon :)
-    in_tmpdir.join('bower.json').write('{"dependencies": {"herp": "1.10.0"}}')
+    in_tmpdir.join('package.json').write('{"dependencies": {"herp": "1.0"}}')
     # Should not raise
     main.test_javascript_package_versions()
 
 
-@pytest.mark.parametrize('js_file', ('bower.json', 'package.json'))
-def test_test_javascript_package_versions_not_matching_python(
-        in_tmpdir, js_file,
-):
+def test_test_javascript_package_versions_not_matching_python(in_tmpdir):
     # TODO: use a dummy package to prevent flake8 upgrade + test breaking
-    # Again, contrived, but let's assume flake8 is a bower and/or npm package
-    in_tmpdir.join(js_file).write('{"dependencies": {"flake8": "0.0.0"}}')
+    # Again, contrived, but let's assume flake8 is an npm
+    in_tmpdir.join('package.json').write(
+        '{"dependencies": {"flake8": "0.0.0"}}',
+    )
     with pytest.raises(AssertionError) as excinfo:
         main.test_javascript_package_versions()
     assert excinfo.value.args == (
@@ -543,40 +542,8 @@ def test_test_javascript_package_versions_not_matching_python(
         "The version installed by Python must match the JavaScript version, but it currently doesn't!\n"  # noqa
         '  JavaScript version: 0.0.0\n'
         '  Python version: 2.6.2\n'
-        'Check requirements.txt and package.json/bower.json!',
+        'Check requirements.txt and package.json!',
     )
-
-
-def test_test_javascript_package_versions_conflicting_bower_and_npm_versions(
-        in_tmpdir,
-):
-    in_tmpdir.join('bower.json').write(
-        '{"dependencies": {"left-pad": "0.0.1"}}',
-    )
-    in_tmpdir.join('package.json').write(
-        '{"dependencies": {"left-pad": "0.0.2"}}',
-    )
-    with pytest.raises(AssertionError) as excinfo:
-        main.test_javascript_package_versions()
-    assert excinfo.value.args == (
-        'Multiple different versions of a package are installed by '
-        'different JavaScript package managers:\n'
-        '  Package: left-pad\n'
-        '  Installed versions: 0.0.1, 0.0.2\n'
-        'Make sure bower.json and package.json agree!',
-    )
-
-
-def test_test_javascript_package_versions_agreeable_bower_and_npm_versions(
-        in_tmpdir,
-):
-    in_tmpdir.join('bower.json').write(
-        '{"dependencies": {"left-pad": "0.0.2"}}',
-    )
-    in_tmpdir.join('package.json').write(
-        '{"dependencies": {"left-pad": "0.0.2"}}',
-    )
-    main.test_javascript_package_versions()
 
 
 def test_check_requirements_is_only_for_applications(in_tmpdir):
@@ -595,71 +562,6 @@ def test_check_requirements_is_only_for_applications_failing():
     )
 
 
-@pytest.mark.parametrize(
-    'version',
-    (
-        '<1',
-        '<=1',
-        '>1',
-        '>=1',
-        '1 || 2',
-        '1 - 2',
-        '1.2.x',
-        '1.2.*',
-        '*',
-        '',
-        '~1',
-        '^1',
-    ),
-)
-def test_bower_assert_pinned_bad(version):
-    with pytest.raises(AssertionError):
-        main.bower_assert_pinned('pkg', version)
-
-
-def test_bower_assert_pined_ok():
-    main.bower_assert_pinned('pkg', '1.2.3')
-
-
-def resource(f):
-    return os.path.join(os.path.dirname(__file__), 'testing', f)
-
-
-@pytest.fixture
-def passing_bower_list():
-    with io.open(resource('passing_bower_list.json')) as f:
-        return json.load(f)
-
-
-@pytest.fixture
-def failing_bower_list():
-    with io.open(resource('failing_bower_list.json')) as f:
-        return json.load(f)
-
-
-def test_bower_find_unpinned_all_pinned(passing_bower_list):
-    assert main.bower_find_unpinned(passing_bower_list) == set()
-
-
-def test_bower_find_unpinned_with_unpinned(failing_bower_list):
-    assert main.bower_find_unpinned(failing_bower_list) == {
-        ('jquery', '2.2.1', '"flot": "0.8.3"'),
-    }
-
-
-def test_bower_format_unpinned_requirements():
-    ret = main.bower_format_unpinned_requirements({
-        ('f', '2', '"c": "1"'),
-        ('a', '1', '"b": "1"'),
-    })
-    assert ret == (
-        '\ta (required by "b": "1" in bower.json)\n'
-        '\t\tmaybe you want "a": "1"?\n'
-        '\tf (required by "c": "1" in bower.json)\n'
-        '\t\tmaybe you want "f": "2"?'
-    )
-
-
 @contextlib.contextmanager
 def subprocess_returns(this):
     with mock.patch.object(
@@ -672,24 +574,6 @@ def subprocess_returns(this):
 def uncolor(text):
     text = re.sub('\033\\[[^A-z]*[A-z]', '', text)
     return re.sub('[^\n\r]*\r', '', text)
-
-
-def test_all_bower_packages_pinned_passing(in_tmpdir, passing_bower_list):
-    in_tmpdir.join('bower.json').write('{}')
-    with subprocess_returns(passing_bower_list):
-        main.test_all_bower_packages_pinned()
-
-
-def test_all_bower_packages_pinned_failing(in_tmpdir, failing_bower_list):
-    in_tmpdir.join('bower.json').write('{}')
-    with pytest.raises(AssertionError) as excinfo:
-        with subprocess_returns(failing_bower_list):
-            main.test_all_bower_packages_pinned()
-    assert excinfo.value.args == (
-        'Unpinned requirements detected!\n\n'
-        '\tjquery (required by "flot": "0.8.3" in bower.json)\n'
-        '\t\tmaybe you want "jquery": "2.2.1"?',
-    )
 
 
 @pytest.mark.parametrize('tree,expected', (
@@ -951,12 +835,10 @@ def test_test_no_conflicting_npm_package_versions_failure(
 
 
 def test_test_javascript_tests_pass_with_no_dependencies_key(in_tmpdir):
-    in_tmpdir.join('bower.json').write('{"name": "derp"}')
     in_tmpdir.join('package.json').write('{"private": true}')
 
     # Should not raise
     main.test_javascript_package_versions()
     main.test_no_conflicting_npm_package_versions()
     main.test_all_npm_packages_pinned()
-    main.test_all_bower_packages_pinned()
     main.test_no_conflicting_npm_package_versions()

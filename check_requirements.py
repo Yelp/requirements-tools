@@ -308,39 +308,20 @@ def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
 
 
 def test_javascript_package_versions():
-    """Make sure package.json and bower.json versions agree with each other,
-    and with the Python versions.
-    """
-    paths = ['bower.json', 'package.json']
-    if not any(os.path.exists(path) for path in paths):  # pragma: no cover
-        pytest.skip('No JavaScript package files (bower.json or package.json)')
+    """Make sure package.json versions agree with python versions."""
+    if not os.path.exists('package.json'):  # pragma: no cover
+        pytest.skip('No JavaScript dependencies (package.json)')
 
     js_packages = defaultdict(set)
 
-    for path in paths:
-        if not os.path.exists(path):
-            continue
-        with io.open(path) as f:
-            contents = json.load(f)
-        for package_name, version in contents.get('dependencies', {}).items():
-            # Normalize underscores to dashes
-            package_name = package_name.replace('_', '-')
-            js_packages[package_name].add(version)
+    with io.open('package.json') as f:
+        contents = json.load(f)
+    for package_name, version in contents.get('dependencies', {}).items():
+        # Normalize underscores to dashes
+        package_name = package_name.replace('_', '-')
+        js_packages[package_name].add(version)
 
     for package_name, versions in js_packages.items():
-        # Check for multiple different versions installed
-        if len(versions) > 1:
-            raise AssertionError(
-                'Multiple different versions of a package are installed by '
-                'different JavaScript package managers:\n'
-                '  Package: {}\n'
-                '  Installed versions: {}\n'
-                'Make sure bower.json and package.json agree!'.format(
-                    package_name,
-                    ', '.join(sorted(versions)),
-                ),
-            )
-
         # Check against Python version
         version, = versions
         if package_name in installed_things:
@@ -351,85 +332,10 @@ def test_javascript_package_versions():
                     "The version installed by Python must match the JavaScript version, but it currently doesn't!\n"  # noqa
                     '  JavaScript version: {}\n'
                     '  Python version: {}\n'
-                    'Check requirements.txt and package.json/bower.json!'.format(  # noqa
+                    'Check requirements.txt and package.json!'.format(
                         package_name, version, python_version,
                     )
                 )
-
-
-def bower_assert_pinned(pkg, version_spec):
-    illegal_starts = (
-        # https://github.com/npm/node-semver#ranges
-        '<', '>',
-        # https://github.com/npm/node-semver#caret-ranges-123-025-004
-        '^',
-        # https://github.com/npm/node-semver#tilde-ranges-123-12-1
-        '~',
-    )
-
-    illegal_substrings = (
-        # https://github.com/npm/node-semver#ranges
-        '||',
-        # https://github.com/npm/node-semver#x-ranges-12x-1x-12-
-        '.x',
-        '*',
-        # https://github.com/npm/node-semver#hyphen-ranges-xyz---abc
-        ' - ',
-    )
-
-    # Rougly based on https://github.com/npm/node-semver#ranges
-    if (
-            not version_spec or
-            version_spec.startswith(illegal_starts) or
-            any(part in version_spec.lower() for part in illegal_substrings)
-    ):
-        raise AssertionError(
-            'Expected all versions in bower.json to be strictly pinned\n'
-            'Found "{}": "{}"'.format(pkg, version_spec),
-        )
-
-
-def bower_find_unpinned(bower_list):
-    pinned = bower_list['pkgMeta']['dependencies']
-    unpinned = set()
-
-    for pkg, pkg_version in pinned.items():
-        bower_assert_pinned(pkg, pkg_version)
-        pkgdep = '"{}": "{}"'.format(pkg, pkg_version)
-        subdeps = bower_list['dependencies'][pkg]['dependencies']
-        for subdep, subdep_info in subdeps.items():
-            if subdep not in pinned:
-                unpinned.add((
-                    subdep, subdep_info['pkgMeta']['version'], pkgdep,
-                ))
-
-    return unpinned
-
-
-def bower_format_unpinned_requirements(unpinned_requirements):
-    return '\t' + '\n\t'.join(
-        '{} (required by {} in bower.json)\n\t\tmaybe you want {}?'.format(
-            pkg,
-            requirement,
-            '"{}": "{}"'.format(pkg, version),
-        )
-        for pkg, version, requirement in sorted(unpinned_requirements)
-    )
-
-
-def test_all_bower_packages_pinned():
-    if not os.path.exists('bower.json'):  # pragma: no cover
-        pytest.skip('No bower.json file')
-
-    bower_list = json.loads(subprocess.check_output((
-        'bower', 'list', '--json', '--offline',
-    )).decode('UTF-8'))
-
-    unpinned = bower_find_unpinned(bower_list)
-    if unpinned:
-        raise AssertionError('Unpinned requirements detected!\n\n{}'.format(
-            bower_format_unpinned_requirements(unpinned),
-        ))
 
 
 def parse_npm_dependency_tree(tree):

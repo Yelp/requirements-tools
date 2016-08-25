@@ -2,14 +2,19 @@
     sha: 616c1ebd1898c91de9a0548866a59cbd9f4547f6
     hooks:
     -   id: trailing-whitespace
+        language_version: python2.7
     -   id: end-of-file-fixer
+        language_version: python2.7
     -   id: autopep8-wrapper
+        language_version: python2.7
     -   id: check-docstring-first
-    -   id: check-json
+        language_version: python2.7
     -   id: check-yaml
+        language_version: python2.7
     -   id: debug-statements
         language_version: python2.7
     -   id: requirements-txt-fixer
+        language_version: python2.7
     -   id: flake8
         language_version: python2.7
 -   repo: git@git.yelpcorp.com:mirrors/asottile/reorder_python_imports
