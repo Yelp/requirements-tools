@@ -1,6 +1,6 @@
 -e .
 coverage
-flake8<=2.999
+flake8
 mock
 pre-commit
 pylint

@@ -93,27 +93,24 @@ def test_to_pinned_versions_uses_key():
 
 
 def test_unpinned_things():
-    flake8req = pkg_resources.Requirement.parse('flake8==2.3.0')
-    ret = main.find_unpinned_requirements(((flake8req, 'reqs.txt'),))
+    pkgreq = pkg_resources.Requirement.parse('pkg-with-deps==0.1.0')
+    ret = main.find_unpinned_requirements(((pkgreq, 'reqs.txt'),))
     assert ret == {
-        ('mccabe', flake8req, 'reqs.txt'),
-        ('pycodestyle', flake8req, 'reqs.txt'),
-        ('pyflakes', flake8req, 'reqs.txt'),
+        ('pkg-dep-1', pkgreq, 'reqs.txt'),
+        ('pkg-dep-2', pkgreq, 'reqs.txt'),
     }
 
 
 def test_format_unpinned_requirements():
     unpinned = main.find_unpinned_requirements((
-        (pkg_resources.Requirement.parse('flake8==2.3.0'), 'reqs.txt'),
+        (pkg_resources.Requirement.parse('pkg-with-deps==0.1.0'), 'reqs.txt'),
     ))
     ret = main.format_unpinned_requirements(unpinned)
     assert ret == (
-        "\tmccabe (required by flake8==2.3.0 in reqs.txt)\n"
-        '\t\tmaybe you want "mccabe==0.5.2"?\n'
-        "\tpycodestyle (required by flake8==2.3.0 in reqs.txt)\n"
-        '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
-        "\tpyflakes (required by flake8==2.3.0 in reqs.txt)\n"
-        '\t\tmaybe you want "pyflakes==1.2.3"?'
+        "\tpkg-dep-1 (required by pkg-with-deps==0.1.0 in reqs.txt)\n"
+        '\t\tmaybe you want "pkg-dep-1==1.0.0"?\n'
+        "\tpkg-dep-2 (required by pkg-with-deps==0.1.0 in reqs.txt)\n"
+        '\t\tmaybe you want "pkg-dep-2==2.0.0"?'
     )
 
 
@@ -374,63 +371,55 @@ def test_test_requirements_pinned_trivial_with_dev_too(in_tmpdir):
 
 def test_test_requirements_pinned_all_pinned(in_tmpdir):
     in_tmpdir.join('requirements.txt').write(
-        'flake8==2.3.0\n'
-        'pycodestyle==2.0.0\n'
-        'mccabe==0.3\n'
-        'pyflakes==0.8.1\n'
+        'pkg-with-deps==0.1.0\n'
+        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-2==1.0.0\n'
     )
     # Should also not raise (all satisfied)
     main.test_requirements_pinned()
 
 
 def test_test_requirements_pinned_all_pinned_dev_only(in_tmpdir):
-    in_tmpdir.join('requirements-dev-minimal.txt').write('flake8==2.3.0')
+    in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-with-deps')
     in_tmpdir.join('requirements-dev.txt').write(
-        'flake8==2.3.0\n'
-        'pycodestyle==2.0.0\n'
-        'mccabe==0.3\n'
-        'pyflakes==0.8.1\n'
+        'pkg-with-deps==0.1.0\n'
+        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-2==1.0.0\n'
     )
     # Should also not raise (all satisfied)
     main.test_requirements_pinned()
 
 
 def test_test_requirements_pinned_missing_some(in_tmpdir):
-    in_tmpdir.join('requirements.txt').write('flake8==2.3.0')
-    in_tmpdir.join('requirements-dev.txt').write('astroid==1.4.3')
+    in_tmpdir.join('requirements.txt').write('pkg-with-deps==0.1.0')
+    in_tmpdir.join('requirements-dev.txt').write('other-pkg-with-deps==0.2.0')
     with pytest.raises(AssertionError) as excinfo:
         main.test_requirements_pinned()
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
-        '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "mccabe==0.5.2"?\n'
-        '\tpycodestyle (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
-        '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "pyflakes==1.2.3"?',
+        '\tpkg-dep-1 (required by pkg-with-deps==0.1.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pkg-dep-1==1.0.0"?\n'
+        '\tpkg-dep-2 (required by pkg-with-deps==0.1.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pkg-dep-2==2.0.0"?',
     )
 
 
 def test_test_requirements_pinned_missing_some_with_dev_reqs(in_tmpdir):
-    in_tmpdir.join('requirements.txt').write('flake8==2.3.0')
-    in_tmpdir.join('requirements-dev.txt').write('astroid==1.4.5')
-    in_tmpdir.join('requirements-dev-minimal.txt').write('astroid')
+    in_tmpdir.join('requirements.txt').write('pkg-with-deps==0.1.0')
+    in_tmpdir.join('requirements-dev.txt').write('other-pkg-with-deps==0.2.0')
+    in_tmpdir.join('requirements-dev-minimal.txt').write(
+        'other-pkg-with-deps',
+    )
     with pytest.raises(AssertionError) as excinfo:
         main.test_requirements_pinned()
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
-        '\tlazy-object-proxy (required by astroid==1.4.5 in requirements-dev.txt)\n'  # noqa
-        '\t\tmaybe you want "lazy-object-proxy==1.2.2"?\n'
-        '\tmccabe (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "mccabe==0.5.2"?\n'
-        '\tpycodestyle (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "pycodestyle==2.0.0"?\n'
-        '\tpyflakes (required by flake8==2.3.0 in requirements.txt)\n'
-        '\t\tmaybe you want "pyflakes==1.2.3"?\n'
-        '\tsix (required by astroid==1.4.5 in requirements-dev.txt)\n'
-        '\t\tmaybe you want "six==1.10.0"?\n'
-        '\twrapt (required by astroid==1.4.5 in requirements-dev.txt)\n'
-        '\t\tmaybe you want "wrapt==1.10.8"?',
+        '\tother-dep-1 (required by other-pkg-with-deps==0.2.0 in requirements-dev.txt)\n'  # noqa
+        '\t\tmaybe you want "other-dep-1==1.0.0"?\n'
+        '\tpkg-dep-1 (required by pkg-with-deps==0.1.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pkg-dep-1==1.0.0"?\n'
+        '\tpkg-dep-2 (required by pkg-with-deps==0.1.0 in requirements.txt)\n'
+        '\t\tmaybe you want "pkg-dep-2==2.0.0"?',
     )
 
 
@@ -448,13 +437,13 @@ def test_get_package_name(in_tmpdir):
 
 
 def test_get_pinned_versions_from_requirement():
-    result = main.get_pinned_versions_from_requirement('flake8')
+    result = main.get_pinned_versions_from_requirement('pkg-with-deps')
     # These are to make this not flaky in future when things change
     assert isinstance(result, set)
     result = sorted(result)
     split = [req.split('==') for req in result]
     packages = [package for package, _ in split]
-    assert packages == ['mccabe', 'pycodestyle', 'pyflakes']
+    assert packages == ['pkg-dep-1', 'pkg-dep-2']
 
 
 def test_get_pinned_versions_from_requirement_circular():
@@ -513,10 +502,9 @@ def test_test_javascript_package_versions_no_npm_versions(in_tmpdir):
 
 
 def test_test_javascript_package_versions_matching(in_tmpdir):
-    # TODO: use a dummy package to prevent flake8 upgrade + test breaking
-    # Contrived, but let's assume flake8 is an npm package
+    # Contrived, but let's assume pkg-with-deps is an npm package
     in_tmpdir.join('package.json').write(
-        '{"dependencies": {"flake8": "2.6.2"}}',
+        '{"dependencies": {"pkg-with-deps": "0.1.0"}}',
     )
     # Should not raise
     main.test_javascript_package_versions()
@@ -530,18 +518,17 @@ def test_test_npm_package_irrelevant_version(in_tmpdir):
 
 
 def test_test_javascript_package_versions_not_matching_python(in_tmpdir):
-    # TODO: use a dummy package to prevent flake8 upgrade + test breaking
-    # Again, contrived, but let's assume flake8 is an npm
+    # Again, contrived, but let's assume pkg-with-deps is an npm
     in_tmpdir.join('package.json').write(
-        '{"dependencies": {"flake8": "0.0.0"}}',
+        '{"dependencies": {"pkg-with-deps": "0.0.0"}}',
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_javascript_package_versions()
     assert excinfo.value.args == (
-        'The package "flake8" is both a JavaScript and Python package.\n'  # noqa
+        'The package "pkg-with-deps" is both a JavaScript and Python package.\n'  # noqa
         "The version installed by Python must match the JavaScript version, but it currently doesn't!\n"  # noqa
         '  JavaScript version: 0.0.0\n'
-        '  Python version: 2.6.2\n'
+        '  Python version: 0.1.0\n'
         'Check requirements.txt and package.json!',
     )
 
