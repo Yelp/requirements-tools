@@ -397,6 +397,11 @@ def test_all_npm_packages_pinned():
     if not os.path.exists('package.json'):  # pragma: no cover
         pytest.skip('No package.json file')
 
+    if not os.path.exists('node_modules'):
+        raise AssertionError(
+            'node_modules not found.  Are you missing a make target?',
+        )
+
     npm_list = parse_npm_dependency_tree(json.loads(subprocess.check_output(
         ('npm', 'list', '--json', '--prod'),
         stderr=open(os.devnull, 'w'),
@@ -427,6 +432,11 @@ def test_no_conflicting_npm_package_versions():
     """
     if not os.path.exists('package.json'):  # pragma: no cover
         pytest.skip('No package.json file')
+
+    if not os.path.exists('node_modules'):
+        raise AssertionError(
+            'node_modules not found.  Are you missing a make target?',
+        )
 
     npm_list = parse_npm_dependency_tree(json.loads(subprocess.check_output(
         ('npm', 'list', '--json', '--prod'),
