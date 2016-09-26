@@ -497,6 +497,7 @@ def test_test_no_underscores_all_dashes_error(in_tmpdir):
 
 def test_test_javascript_package_versions_no_npm_versions(in_tmpdir):
     in_tmpdir.join('package.json').write('{"dependencies": {}}')
+    in_tmpdir.join('node_modules').ensure_dir()
     # Should not raise
     main.test_javascript_package_versions()
 
@@ -506,6 +507,7 @@ def test_test_javascript_package_versions_matching(in_tmpdir):
     in_tmpdir.join('package.json').write(
         '{"dependencies": {"pkg-with-deps": "0.1.0"}}',
     )
+    in_tmpdir.join('node_modules').ensure_dir()
     # Should not raise
     main.test_javascript_package_versions()
 
@@ -513,6 +515,7 @@ def test_test_javascript_package_versions_matching(in_tmpdir):
 def test_test_npm_package_irrelevant_version(in_tmpdir):
     # I hope we don't install a python package named herp any time soon :)
     in_tmpdir.join('package.json').write('{"dependencies": {"herp": "1.0"}}')
+    in_tmpdir.join('node_modules').ensure_dir()
     # Should not raise
     main.test_javascript_package_versions()
 
@@ -522,6 +525,7 @@ def test_test_javascript_package_versions_not_matching_python(in_tmpdir):
     in_tmpdir.join('package.json').write(
         '{"dependencies": {"pkg-with-deps": "0.0.0"}}',
     )
+    in_tmpdir.join('node_modules').ensure_dir()
     with pytest.raises(AssertionError) as excinfo:
         main.test_javascript_package_versions()
     assert excinfo.value.args == (
@@ -688,10 +692,10 @@ def test_parse_npm_dependency_tree(tree, expected):
         },
     ),
 ))
-def test_test_all_npm_packages_pinned_success(tree, package_json, tmpdir):
-    with subprocess_returns(tree), tmpdir.as_cwd():
-        with tmpdir.join('package.json').open('w') as f:
-            json.dump(package_json, f)
+def test_test_all_npm_packages_pinned_success(tree, package_json, in_tmpdir):
+    with subprocess_returns(tree):
+        in_tmpdir.join('package.json').write(json.dumps(package_json))
+        in_tmpdir.join('node_modules').ensure_dir()
         main.test_all_npm_packages_pinned()
 
 
@@ -736,11 +740,11 @@ def test_test_all_npm_packages_pinned_failure(
         tree,
         package_json,
         error,
-        tmpdir,
+        in_tmpdir,
 ):
-    with subprocess_returns(tree), tmpdir.as_cwd():
-        with tmpdir.join('package.json').open('w') as f:
-            json.dump(package_json, f)
+    with subprocess_returns(tree):
+        in_tmpdir.join('package.json').write(json.dumps(package_json))
+        in_tmpdir.join('node_modules').ensure_dir()
         with pytest.raises(AssertionError) as excinfo:
             main.test_all_npm_packages_pinned()
     assert uncolor(excinfo.value.args[0]) == error
@@ -770,11 +774,11 @@ def test_test_all_npm_packages_pinned_failure(
 def test_test_no_conflicting_npm_package_versions_success(
         tree,
         package_json,
-        tmpdir,
+        in_tmpdir,
 ):
-    with subprocess_returns(tree), tmpdir.as_cwd():
-        with tmpdir.join('package.json').open('w') as f:
-            json.dump(package_json, f)
+    with subprocess_returns(tree):
+        in_tmpdir.join('package.json').write(json.dumps(package_json))
+        in_tmpdir.join('node_modules').ensure_dir()
         main.test_no_conflicting_npm_package_versions()
 
 
@@ -811,11 +815,11 @@ def test_test_no_conflicting_npm_package_versions_failure(
         tree,
         package_json,
         error,
-        tmpdir,
+        in_tmpdir,
 ):
-    with subprocess_returns(tree), tmpdir.as_cwd():
-        with tmpdir.join('package.json').open('w') as f:
-            json.dump(package_json, f)
+    with subprocess_returns(tree):
+        in_tmpdir.join('package.json').write(json.dumps(package_json))
+        in_tmpdir.join('node_modules').ensure_dir()
         with pytest.raises(AssertionError) as excinfo:
             main.test_no_conflicting_npm_package_versions()
     assert uncolor(excinfo.value.args[0]) == error
@@ -823,9 +827,25 @@ def test_test_no_conflicting_npm_package_versions_failure(
 
 def test_test_javascript_tests_pass_with_no_dependencies_key(in_tmpdir):
     in_tmpdir.join('package.json').write('{"private": true}')
+    in_tmpdir.join('node_modules').ensure_dir()
 
     # Should not raise
     main.test_javascript_package_versions()
     main.test_no_conflicting_npm_package_versions()
     main.test_all_npm_packages_pinned()
-    main.test_no_conflicting_npm_package_versions()
+
+
+@pytest.mark.parametrize(
+    'testfunc',
+    (
+        main.test_all_npm_packages_pinned,
+        main.test_no_conflicting_npm_package_versions,
+    ),
+)
+def test_missing_node_modules_raises(in_tmpdir, testfunc):
+    in_tmpdir.join('package.json').write('{"private": true}')
+    with pytest.raises(AssertionError) as excinfo:
+        testfunc()
+    assert excinfo.value.args == (
+        'node_modules not found.  Are you missing a make target?',
+    )
