@@ -5,12 +5,12 @@ from setuptools import setup
 setup(
     name='check_requirements',
     description='Console script to help with testing requirements.',
-    version='0.6.0',
+    version='0.6.1',
     classifiers=[
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
     install_requires=['pytest'],
     py_modules=['check_requirements'],
