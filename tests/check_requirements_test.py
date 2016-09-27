@@ -567,7 +567,7 @@ def uncolor(text):
     return re.sub('[^\n\r]*\r', '', text)
 
 
-@pytest.mark.parametrize('tree,expected', (
+@pytest.mark.parametrize(('tree', 'expected'), (
     (
         {'name': 'www_pages', 'dependencies': {}},
         {},
@@ -577,9 +577,11 @@ def uncolor(text):
             'name': 'www_pages',
             'dependencies': {'closure_compiler': {'version': '1.0'}},
         },
-        {
-            'closure_compiler': {'1.0': {'www_pages@*'}},
-        },
+        {'closure_compiler': {'1.0': {'(your app)@*'}}},
+    ),
+    (
+        {'dependencies': {'closure_compiler': {'version': '1.0'}}},
+        {'closure_compiler': {'1.0': {'(your app)@*'}}},
     ),
     (
         {
@@ -592,7 +594,7 @@ def uncolor(text):
             },
         },
         {
-            'closure_compiler': {'1.0': {'www_pages@*'}},
+            'closure_compiler': {'1.0': {'(your app)@*'}},
             'closure_externs': {'2.0': {'closure_compiler@1.0'}},
         },
     ),
@@ -608,9 +610,9 @@ def uncolor(text):
             },
         },
         {
-            'closure_compiler': {'1.0': {'www_pages@*'}},
+            'closure_compiler': {'1.0': {'(your app)@*'}},
             'closure_externs': {
-                '2.0': {'closure_compiler@1.0', 'www_pages@*'},
+                '2.0': {'closure_compiler@1.0', '(your app)@*'},
             },
         },
     ),
@@ -626,10 +628,10 @@ def uncolor(text):
             },
         },
         {
-            'closure_compiler': {'1.0': {'www_pages@*'}},
+            'closure_compiler': {'1.0': {'(your app)@*'}},
             'closure_externs': {
                 '2.0': {'closure_compiler@1.0'},
-                '3.0': {'www_pages@*'},
+                '3.0': {'(your app)@*'},
             },
         },
     ),
@@ -708,7 +710,7 @@ def test_test_all_npm_packages_pinned_success(tree, package_json, in_tmpdir):
         {'dependencies': {}},
         (
             'Unpinned requirements detected!\n'
-            '    closure_compiler@1.0 <-www_pages@*'
+            '    closure_compiler@1.0 <-(your app)@*'
         ),
     ),
     (
@@ -731,8 +733,8 @@ def test_test_all_npm_packages_pinned_success(tree, package_json, in_tmpdir):
         {'dependencies': {'closure_externs': '2.0'}},
         (
             'Unpinned requirements detected!\n'
-            '    closure_compiler@1.0 <-www_pages@*\n'
-            '    left-pad@3.0 <-closure_externs@2.0<-closure_compiler@1.0<-www_pages@*'  # noqa
+            '    closure_compiler@1.0 <-(your app)@*\n'
+            '    left-pad@3.0 <-closure_externs@2.0<-closure_compiler@1.0<-(your app)@*'  # noqa
         ),
     ),
 ))
@@ -803,11 +805,11 @@ def test_test_no_conflicting_npm_package_versions_success(
         (
             'Conflicting NPM package requirements detected!\n'
             '  closure_compiler needs multiple versions:\n'
-            '    closure_compiler@4.0 <-www_pages@*\n'
-            '    closure_compiler@9.999 <-closure_externs@2.0<-www_pages@*\n'
+            '    closure_compiler@4.0 <-(your app)@*\n'
+            '    closure_compiler@9.999 <-closure_externs@2.0<-(your app)@*\n'
             '  closure_externs needs multiple versions:\n'
-            '    closure_externs@1.0 <-closure_compiler@4.0<-www_pages@*\n'
-            '    closure_externs@2.0 <-www_pages@*'
+            '    closure_externs@1.0 <-closure_compiler@4.0<-(your app)@*\n'
+            '    closure_externs@2.0 <-(your app)@*'
         ),
     ),
 ))
