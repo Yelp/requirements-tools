@@ -362,10 +362,13 @@ def parse_npm_dependency_tree(tree):
             # use jQuery in prod (we load it from a CDN).
             if name == 'jquery':
                 return
-            ret[name][cur['version']].add('{}@{}'.format(
-                parent['name'],
-                parent.get('version', '*'),
-            ))
+            if tree is parent:
+                parent_dep = '(your app)@*'
+            else:
+                parent_dep = '{}@{}'.format(
+                    parent['name'], parent.get('version', '*'),
+                )
+            ret[name][cur['version']].add(parent_dep)
             cur['name'] = name
         for dep_name, dep in cur.get('dependencies', {}).items():
             inner(dep, name=dep_name, parent=cur)
