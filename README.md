@@ -7,11 +7,12 @@ run as part of your project's tests.
 
 ## What it does
 
-* Checks for requirements listed in `requirements.txt` but not `setup.py`
-  (probably indicates unused requirements or used requirements that need to be
-  added to `setup.py`)
+* Checks for requirements listed in `requirements.txt` but not
+  `requirements-minimal.txt` (probably indicates unused requirements or used
+  requirements that need to be added to `requirements-minimal.txt`).
 
-* Checks for requirements in `setup.py` but not in `requirements.txt`
+* Checks for requirements in `requirements-minimal.txt` but not in
+  `requirements.txt` (generally referred to "unpinned" requirements.)
 
 * Checks for consistency between `requirements.txt` and `package.json` (if one
   exists)
@@ -26,19 +27,23 @@ run as part of your project's tests.
 
 The recommended layout for your project is:
 
-* `setup.py` contains a list of unpinned (or loosely-pinned) top-level
-  requirements needed in production. For example, you might list `requests`,
-  but you wouldn't list libraries `requests` depends on.
+* No `setup.py`.  `setup.py` is not entirely useful for applications, we'll
+  specify minimal requirements in `requirements-minimal.txt` (see below).
+
+* `requirements-minimal.txt` contains a list of unpinned (or loosely-pinned)
+  top-level requirements needed in production. For example, you might list
+  `requests`, but you wouldn't list libraries `requests` depends on.
 
   If you know of a problematic version, you should *loosely* pin here (e.g.
   `requests>=4` if you know you depend on APIs introduced in version 4).
 
-* `requirements-dev-minimal.txt` is much like `setup.py`, but is intended for
-  dev dependencies. You should list loosely-pinned top-level dependencies only.
+* `requirements-dev-minimal.txt` is much like `requirements-minimal.txt`, but
+  is intended for dev dependencies. You should list loosely-pinned top-level
+  dependencies only.
 
 * `requirements.txt` contains a list of all production dependencies (and
   sub-dependencies) with strict pinning. When deploying your app, you install
-  dependencies from this file, not `setup.py.
+  dependencies from this file, not `requirements-minimal.txt`.
 
   The benefits to strict pinning are more deterministic versioning (you can
   roll back more easily) and faster virtualenv generation with
@@ -46,7 +51,7 @@ The recommended layout for your project is:
 
   It should be possible to automatically generate `requirements.txt` by
   creating a fresh virtualenv, installing your app's dependencies from
-  `setup.py`, and running `pip freeze`.
+  `requirements-minimal.txt`, and running `pip freeze`.
 
 * `requirements-dev.txt` is just like `requirements.txt` but for dev
   dependencies (and dev sub-dependencies).

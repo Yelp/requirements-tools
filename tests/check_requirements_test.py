@@ -114,245 +114,177 @@ def test_format_unpinned_requirements():
     )
 
 
-@pytest.yield_fixture
-def mock_package_name():
-    with mock.patch.object(main, 'get_package_name', return_value='pkg'):
-        yield
-
-
-@pytest.yield_fixture
-def mock_pinned_from_requirement_ab():
-    with mock.patch.object(
-        main,
-        'get_pinned_versions_from_requirement',
-        return_value={'a==1', 'b==2'},
-    ):
-        yield
-
-
-@pytest.yield_fixture
-def mock_pinned_from_requirement_abc():
-    with mock.patch.object(
-        main,
-        'get_pinned_versions_from_requirement',
-        return_value={'a==1', 'b==2', 'c==3'},
-    ):
-        yield
-
-
-@pytest.yield_fixture
-def mock_get_raw_requirements_ab():
-    with mock.patch.object(
-        main,
-        'get_raw_requirements',
-        return_value={
-            (pkg_resources.Requirement.parse('a==1'), 'r.txt'),
-            (pkg_resources.Requirement.parse('b==2'), 'r.txt'),
-        },
-    ):
-        yield
-
-
-@pytest.yield_fixture
-def mock_get_raw_requirements_abc():
-    with mock.patch.object(
-        main,
-        'get_raw_requirements',
-        return_value={
-            (pkg_resources.Requirement.parse('a==1'), 'r.txt'),
-            (pkg_resources.Requirement.parse('b==2'), 'r.txt'),
-            (pkg_resources.Requirement.parse('c==3'), 'r.txt'),
-        },
-    ):
-        yield
-
-
-@pytest.mark.usefixtures(
-    'mock_package_name', 'mock_pinned_from_requirement_abc',
-    'mock_get_raw_requirements_abc',
-)
 def test_test_top_level_dependencies(in_tmpdir):
     # So we don't skip
-    in_tmpdir.join('setup.py').ensure()
-    in_tmpdir.join('requirements.txt').ensure()
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
+    in_tmpdir.join('requirements.txt').write(
+        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-2==2.0.0\n'
+        'pkg-with-deps==0.1.0\n'
+    )
     # Should pass since all are satisfied
     main.test_top_level_dependencies()
 
 
-@pytest.mark.usefixtures(
-    'mock_package_name', 'mock_pinned_from_requirement_abc',
-    'mock_get_raw_requirements_ab',
-)
-def test_test_top_level_dependencies_too_much_pinned(in_tmpdir):
+def test_test_top_level_dependencies_not_enough_pinned(in_tmpdir):
     # So we don't skip
-    in_tmpdir.join('setup.py').ensure()
-    in_tmpdir.join('requirements.txt').ensure()
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
+    in_tmpdir.join('requirements.txt').write(
+        'pkg-dep-1==1.0.0\n'
+        'pkg-with-deps==0.1.0\n'
+    )
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
     assert excinfo.value.args == (
-        'Dependencies derived from setup.py are not pinned in '
+        'Dependencies derived from requirements-minimal.txt are not pinned in '
         'requirements.txt\n'
         '(Probably need to add something to requirements.txt):\n'
-        '\t- c==3',
+        '\t- pkg-dep-2==2.0.0',
     )
 
 
 @pytest.mark.parametrize('version', ('1.2.3-rc1', '1.2.3rc1'))
 def test_prerelease_name_normalization(in_tmpdir, version):
-    in_tmpdir.join('setup.py').write(
-        'from setuptools import setup\n'
-        'setup(\n'
-        '    name="depends-on-prerelease-pkg",\n'
-        '    install_requires=["prerelease-pkg"],\n'
-        ')\n'
-    )
+    in_tmpdir.join('requirements-minimal.txt').write('prerelease-pkg')
     in_tmpdir.join('requirements.txt').write(
         'prerelease-pkg=={}'.format(version),
     )
     main.test_top_level_dependencies()
 
 
-@contextlib.contextmanager
-def mocked_package(package_name='pkg', prod_deps=(), dev_deps=()):
-    def fake_get_pinned_versions_from_requirement(req):
-        """If it's the package itself, return prod deps. If it's any other
-        package, assume it's a dev dep and return all dev dependencies.
-
-        This is not great but short of real integration tests it works...
-        """
-        if req == package_name:
-            deps = prod_deps
-        else:
-            deps = dev_deps
-        return {'=='.join(dep) for dep in deps}
-
-    with mock.patch.object(
-        main,
-        'get_pinned_versions_from_requirement',
-        side_effect=fake_get_pinned_versions_from_requirement,
-    ), mock.patch.object(
-        main,
-        'installed_things',
-        {
-            package: mock.Mock(version=version)
-            for package, version in prod_deps + dev_deps
-        }
-    ):
-        yield
-
-
-@pytest.mark.usefixtures('mock_package_name')
-def test_test_top_level_dependencies_no_requirements_dev_minimal(in_tmpdir):
+def test_test_top_level_dependencies_no_requirements_dev_minimal(
+        in_tmpdir, capsys,
+):
     """If there's no requirements-dev-minimal.txt, we should suggest you create
-    a requirements-dev-minimal.txt but not fail."""
-    in_tmpdir.join('requirements-dev.txt').write('a\nb==3\n')
-    with mocked_package(dev_deps=(('a', '4'), ('b', '3'))):
-        with mock.patch.object(main, 'print') as fake_print:
-            main.test_top_level_dependencies()  # should not raise
+    a requirements-dev-minimal.txt but not fail.
+    """
+    in_tmpdir.join('requirements-minimal.txt').ensure()
+    in_tmpdir.join('requirements.txt').ensure()
+    in_tmpdir.join('requirements-dev.txt').write(
+        'pkg-dep-1\n'
+        'pkg-dep-2==2.0.0\n'
+    )
+    main.test_top_level_dependencies()  # should not raise
     assert (
         'Warning: check-requirements is *not* checking your dev dependencies.'
-        in fake_print.call_args[0][0]
+        in capsys.readouterr()[0]
     )
 
 
-@pytest.mark.usefixtures('mock_package_name')
 def test_test_top_level_dependencies_no_dev_deps_pinned(in_tmpdir):
     """If there's a requirements-dev-minimal.txt but no requirements-dev.txt,
-    we should tell you to pin everything there."""
-    in_tmpdir.join('requirements-dev-minimal.txt').write('a\nb\n')
-    with mocked_package(dev_deps=(('a', '2'), ('b', '3'))):
-        with pytest.raises(AssertionError) as excinfo:
-            main.test_top_level_dependencies()
-        assert excinfo.value.args == (
-            'Dependencies derived from requirements-dev-minimal.txt are '
-            'not pinned in requirements-dev.txt\n'
-            '(Probably need to add something to requirements-dev.txt):\n'
-            '\t- a==2\n'
-            '\t- b==3',
-        )
-
-        # and when you do pin it, now the tests pass! :D
-        in_tmpdir.join('requirements-dev.txt').write('a==2\nb==3\n')
+    we should tell you to pin everything there.
+    """
+    in_tmpdir.join('requirements-minimal.txt').ensure()
+    in_tmpdir.join('requirements.txt').ensure()
+    in_tmpdir.join('requirements-dev-minimal.txt').write(
+        'pkg-dep-1\n'
+        'pkg-dep-2\n'
+    )
+    with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
+    assert excinfo.value.args == (
+        'Dependencies derived from requirements-dev-minimal.txt are '
+        'not pinned in requirements-dev.txt\n'
+        '(Probably need to add something to requirements-dev.txt):\n'
+        '\t- pkg-dep-1==1.0.0\n'
+        '\t- pkg-dep-2==2.0.0',
+    )
+
+    # and when you do pin it, now the tests pass! :D
+    in_tmpdir.join('requirements-dev.txt').write(
+        'pkg-dep-1==1.0.0\npkg-dep-2==2.0.0\n',
+    )
+    main.test_top_level_dependencies()
 
 
-@pytest.mark.usefixtures('mock_package_name')
 def test_test_top_level_dependencies_some_dev_deps_not_pinned(in_tmpdir):
     """If there's a requirements-dev-minimal.txt but we're missing stuff in
-    requirements-dev.txt, we should tell you to pin more stuff there."""
-    in_tmpdir.join('requirements-dev-minimal.txt').write('a\nb\n')
-    in_tmpdir.join('requirements-dev.txt').write('a==2\n')
-    with mocked_package(dev_deps=(('a', '2'), ('b', '3'))):
-        with pytest.raises(AssertionError) as excinfo:
-            main.test_top_level_dependencies()
-        assert excinfo.value.args == (
-            'Dependencies derived from requirements-dev-minimal.txt are '
-            'not pinned in requirements-dev.txt\n'
-            '(Probably need to add something to requirements-dev.txt):\n'
-            '\t- b==3',
-        )
-
-        # and when you do pin it, now the tests pass! :D
-        in_tmpdir.join('requirements-dev.txt').write('a==2\nb==3\n')
+    requirements-dev.txt, we should tell you to pin more stuff there.
+    """
+    in_tmpdir.join('requirements-minimal.txt').ensure()
+    in_tmpdir.join('requirements.txt').ensure()
+    in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-with-deps')
+    in_tmpdir.join('requirements-dev.txt').write(
+        'pkg-with-deps==0.1.0\n'
+        'pkg-dep-1==1.0.0\n'
+    )
+    with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
+    assert excinfo.value.args == (
+        'Dependencies derived from requirements-dev-minimal.txt are '
+        'not pinned in requirements-dev.txt\n'
+        '(Probably need to add something to requirements-dev.txt):\n'
+        '\t- pkg-dep-2==2.0.0',
+    )
+
+    # and when you do pin it, now the tests pass! :D
+    in_tmpdir.join('requirements-dev.txt').write(
+        'pkg-with-deps==0.1.0\n'
+        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-2==2.0.0\n'
+    )
+    main.test_top_level_dependencies()
 
 
-@pytest.mark.usefixtures('mock_package_name')
 def test_test_top_level_dependencies_overlapping_prod_dev_deps(in_tmpdir):
     """If we have a dep which is both a prod and dev dep, we should complain if
-    it appears in requirements-dev.txt."""
-    in_tmpdir.join('requirements-dev-minimal.txt').write('a\n')
-    in_tmpdir.join('requirements.txt').write('a==2\n')
-    in_tmpdir.join('requirements-dev.txt').write('a==2\n')
-    with mocked_package(prod_deps=[('a', '2')], dev_deps=[('a', '2')]):
-        with pytest.raises(AssertionError) as excinfo:
-            main.test_top_level_dependencies()
-        # TODO: this exception is misleading, ideally it should tell you that
-        # you don't need to pin it in reqs-dev.txt if it's also a prod dep
-        assert excinfo.value.args == (
-            'Requirements are pinned in requirements-dev.txt '
-            'but are not depended on in requirements-dev-minimal.txt\n'
-            '(Probably need to add something to '
-            'requirements-dev-minimal.txt)\n'
-            '(or remove from requirements-dev.txt):\n'
-            '\t- a==2',
-        )
+    it appears in requirements-dev.txt.
+    """
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-dep-1')
+    in_tmpdir.join('requirements.txt').write('pkg-dep-1==1.0.0')
+    in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-dep-1')
+    in_tmpdir.join('requirements-dev.txt').write('pkg-dep-1==1.0.0')
+    with pytest.raises(AssertionError) as excinfo:
+        main.test_top_level_dependencies()
+    # TODO: this exception is misleading, ideally it should tell you that
+    # you don't need to pin it in reqs-dev.txt if it's also a prod dep
+    assert excinfo.value.args == (
+        'Requirements are pinned in requirements-dev.txt '
+        'but are not depended on in requirements-dev-minimal.txt\n'
+        '(Probably need to add something to '
+        'requirements-dev-minimal.txt)\n'
+        '(or remove from requirements-dev.txt):\n'
+        '\t- pkg-dep-1==1.0.0',
+    )
 
 
-@pytest.mark.usefixtures('mock_package_name')
 def test_test_top_level_dependencies_prod_dep_is_only_in_dev_deps(in_tmpdir):
     """If we've defined a prod dependency only in requirements-dev.txt, we
-    should tell the user to put it in requirements.txt instead."""
-    in_tmpdir.join('requirements-dev-minimal.txt').write('a\n')
-    in_tmpdir.join('requirements.txt').write('')
-    in_tmpdir.join('requirements-dev.txt').write('a==2\n')
-    with mocked_package(prod_deps=[('a', '2')], dev_deps=[('a', '2')]):
-        with pytest.raises(AssertionError) as excinfo:
-            main.test_top_level_dependencies()
-        assert excinfo.value.args == (
-            'Dependencies derived from setup.py are not pinned in '
-            'requirements.txt\n'
-            '(Probably need to add something to requirements.txt):\n'
-            '\t- a==2',
-        )
+    should tell the user to put it in requirements.txt instead.
+    """
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
+    in_tmpdir.join('requirements.txt').write(
+        'pkg-with-deps==0.1.0\n'
+        'pkg-dep-1==1.0.0\n'
+    )
+    in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-dep-2')
+    in_tmpdir.join('requirements-dev.txt').write('pkg-dep-2==2.0.0')
+    with pytest.raises(AssertionError) as excinfo:
+        main.test_top_level_dependencies()
+    assert excinfo.value.args == (
+        'Dependencies derived from requirements-minimal.txt are not '
+        'pinned in requirements.txt\n'
+        '(Probably need to add something to requirements.txt):\n'
+        '\t- pkg-dep-2==2.0.0',
+    )
 
 
-@pytest.mark.usefixtures(
-    'mock_package_name', 'mock_pinned_from_requirement_ab',
-    'mock_get_raw_requirements_abc',
-)
-def test_test_top_level_dependencies_not_enough_pinned(in_tmpdir):
+def test_test_top_level_dependencies_too_muchh_pinned(in_tmpdir):
     # So we don't skip
-    in_tmpdir.join('setup.py').ensure()
-    in_tmpdir.join('requirements.txt').ensure()
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-dep-1')
+    in_tmpdir.join('requirements.txt').write(
+        'pkg-dep-1==1.0.0\n'
+        'other-dep-1==1.0.0\n'
+    )
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
     assert excinfo.value.args == (
         'Requirements are pinned in requirements.txt but are not depended '
-        'on in setup.py\n'
-        '(Probably need to add something to setup.py)\n'
+        'on in requirements-minimal.txt\n'
+        '(Probably need to add something to requirements-minimal.txt)\n'
         '(or remove from requirements.txt):\n'
-        '\t- c==3',
+        '\t- other-dep-1==1.0.0',
     )
 
 
@@ -427,13 +359,6 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs(in_tmpdir):
 def in_tmpdir(tmpdir):
     with tmpdir.as_cwd():
         yield tmpdir
-
-
-def test_get_package_name(in_tmpdir):
-    in_tmpdir.join('setup.py').write(
-        'from setuptools import setup\nsetup(name="foo")',
-    )
-    assert main.get_package_name() == 'foo'
 
 
 def test_get_pinned_versions_from_requirement():
@@ -550,6 +475,28 @@ def test_check_requirements_is_only_for_applications_failing():
         'mind (and does not properly work for libraries).\n'
         "Either remove check-requirements (if you're a library) or "
         '`touch requirements.txt`.',
+    )
+
+
+def test_check_requirements_integrity_passing(in_tmpdir):
+    in_tmpdir.join('requirements.txt').write('pkg-with-deps==0.1.0')
+    main.check_requirements_integrity()
+
+
+def test_check_requirements_integrity_doesnt_care_about_unpinned(in_tmpdir):
+    in_tmpdir.join('requirements.txt').write('pkg-with-deps')
+    main.check_requirements_integrity()
+
+
+def test_check_requirements_integrity_failing(in_tmpdir):
+    in_tmpdir.join('requirements.txt').write('pkg-with-deps==1.0.0')
+    with pytest.raises(AssertionError) as excinfo:
+        main.check_requirements_integrity()
+    assert excinfo.value.args == (
+        'Installed requirements do not match requirement files!\n'
+        'Rebuild your virtualenv:\n'
+        ' - (requirements.txt) pkg-with-deps==1.0.0 '
+        '(installed) pkg-with-deps==0.1.0\n',
     )
 
 
