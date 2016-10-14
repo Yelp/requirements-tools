@@ -3,6 +3,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import io
+import itertools
 import json
 import os.path
 import subprocess
@@ -122,7 +123,7 @@ def check_requirements_is_only_for_applications():
         )
 
 
-def test_requirements_pinned(requirements_files=REQUIREMENTS_FILES):
+def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
     # for compatibility with repos that haven't started using
     # requirements-dev-minimal.txt, we don't want to force pinning
     # requirements-dev.txt until they use minimal
@@ -133,16 +134,44 @@ def test_requirements_pinned(requirements_files=REQUIREMENTS_FILES):
             not os.path.exists(reqfile)
             for reqfile in requirements_files
     ):  # pragma: no cover
+        return
+
+    return list(itertools.chain.from_iterable([
+        get_raw_requirements(reqfile)
+        for reqfile in requirements_files
+        if os.path.exists(reqfile)
+    ]))
+
+
+@pytest.fixture(autouse=True, scope='session')
+def check_requirements_integrity():
+    raw_requirements = _get_all_raw_requirements()
+    incorrect = []
+    for req, filename in raw_requirements:
+        version = to_version(req)
+        if version is None:  # Not pinned, just skip
+            continue
+        if installed_things[req.key].version != version:
+            incorrect.append((
+                filename, req.key, version, installed_things[req.key].version,
+            ))
+    if incorrect:
+        raise AssertionError(
+            'Installed requirements do not match requirement files!\n'
+            'Rebuild your virtualenv:\n{}'.format(''.join(
+                ' - ({}) {}=={} (installed) {}=={}\n'.format(
+                    filename, pkg, depped, pkg, installed,
+                )
+                for filename, pkg, depped, installed in incorrect
+            ))
+        )
+
+
+def test_requirements_pinned():
+    raw_requirements = _get_all_raw_requirements()
+    if raw_requirements is None:  # pragma: no cover
         pytest.skip('No requirements files found')
 
-    raw_requirements = sum(
-        [
-            get_raw_requirements(reqfile)
-            for reqfile in requirements_files
-            if os.path.exists(reqfile)
-        ],
-        [],
-    )
     unpinned_requirements = find_unpinned_requirements(raw_requirements)
     if unpinned_requirements:
         raise AssertionError(
@@ -150,12 +179,6 @@ def test_requirements_pinned(requirements_files=REQUIREMENTS_FILES):
                 format_unpinned_requirements(unpinned_requirements),
             )
         )
-
-
-def get_package_name():
-    return subprocess.check_output(
-        (sys.executable, 'setup.py', '--name'),
-    ).decode('UTF-8').strip()
 
 
 def get_pinned_versions_from_requirement(requirement):
@@ -184,13 +207,21 @@ def format_versions_on_lines_with_dashes(versions):
     )
 
 
+def _expected_pinned(filename):
+    ret = set()
+    for req, _ in get_raw_requirements(filename):
+        ret.add('{}=={}'.format(req.key, installed_things[req.key].version))
+        ret |= get_pinned_versions_from_requirement(req.key)
+    return ret
+
+
 def test_top_level_dependencies():
-    """Test that top-level requirements (setup.py and reqs-dev-minimal) are
-    consistent with the pinned requirements.
+    """Test that top-level requirements (reqs-minimal and reqs-dev-minimal)
+    are consistent with the pinned requirements.
     """
     if all(
             not os.path.exists(path) for path in (
-                'setup.py',
+                'requirements-minimal.txt',
                 'requirements.txt',
                 'requirements-dev-minimal.txt',
                 'requirements-dev.txt',
@@ -198,35 +229,22 @@ def test_top_level_dependencies():
     ):  # pragma: no cover
         pytest.skip('No requirements files')
 
-    package_name = get_package_name()
-
-    expected_pinned_prod_deps = get_pinned_versions_from_requirement(
-        package_name,
-    )
-
+    expected_pinned_prod = _expected_pinned('requirements-minimal.txt')
     environments = [
         (
-            expected_pinned_prod_deps,
+            expected_pinned_prod,
             'requirements.txt',
-            'setup.py',
+            'requirements-minimal.txt',
         ),
     ]
 
     if os.path.exists('requirements-dev-minimal.txt'):
-        expected_pinned_dev_deps = set()
-        for req, _ in get_raw_requirements('requirements-dev-minimal.txt'):
-            expected_pinned_dev_deps.add('{}=={}'.format(
-                req.key,
-                installed_things[req.key].version,
-            ))
-            expected_pinned_dev_deps |= get_pinned_versions_from_requirement(
-                req.key,
-            )
+        expected_pinned_dev = _expected_pinned('requirements-dev-minimal.txt')
         # if there are overlapping prod/dev deps, only list in prod
         # requirements
-        expected_pinned_dev_deps -= expected_pinned_prod_deps
+        expected_pinned_dev -= expected_pinned_prod
         environments.append((
-            expected_pinned_dev_deps,
+            expected_pinned_dev,
             'requirements-dev.txt',
             'requirements-dev-minimal.txt',
         ))
@@ -245,9 +263,7 @@ def test_top_level_dependencies():
         )
 
     for expected_pinned, pin_filename, minimal_filename in environments:
-        expected_pinned = {
-            parse_requirement(s) for s in expected_pinned
-        }
+        expected_pinned = {parse_requirement(s) for s in expected_pinned}
         if os.path.exists(pin_filename):
             requirements = {
                 req for req, _ in get_raw_requirements(pin_filename)
