@@ -151,10 +151,11 @@ def check_requirements_integrity():
         version = to_version(req)
         if version is None:  # Not pinned, just skip
             continue
-        if installed_things[req.key].version != version:
-            incorrect.append((
-                filename, req.key, version, installed_things[req.key].version,
-            ))
+        installed_version = to_version(parse_requirement('{}=={}'.format(
+            req.key, installed_things[req.key].version,
+        )))
+        if installed_version != version:
+            incorrect.append((filename, req.key, version, installed_version))
     if incorrect:
         raise AssertionError(
             'Installed requirements do not match requirement files!\n'
