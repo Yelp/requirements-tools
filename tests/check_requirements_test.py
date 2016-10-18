@@ -513,6 +513,12 @@ def test_check_requirements_integrity_failing(in_tmpdir):
     )
 
 
+@pytest.mark.parametrize('version', ('2.13-1', '2.13.post1'))
+def test_check_requirements_integrity_post_version(in_tmpdir, version):
+    in_tmpdir.join('requirements.txt').write('chameleon=={}'.format(version))
+    main.check_requirements_integrity()
+
+
 @contextlib.contextmanager
 def subprocess_returns(this):
     with mock.patch.object(
