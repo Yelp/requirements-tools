@@ -2,7 +2,7 @@ check-requirements
 ========
 
 check-requirements tests for problems with requirements. It's intended to be
-run as part of your project's tests.
+run as part of your application's tests.
 
 
 ## What is it useful for?
@@ -32,10 +32,10 @@ best practices is to not pin requirements (see below for definitions).
 * Checks for unpinned requirements or loosely-pinned requirements
 
 
-## Integrating into your project
+## Integrating into your application
 ### Recommended requirements setup
 
-The recommended layout for your project is:
+The recommended layout for your application is:
 
 * No `setup.py`.  `setup.py` is not entirely useful for applications, we'll
   specify minimal requirements in `requirements-minimal.txt` (see below).
@@ -72,17 +72,18 @@ The recommended layout for your project is:
   `requirements.txt`.
 
 * `package.json` (for frontend services only) should list strictly-pinned
-  dependencies. For packages which provide both a Python and an npm package
+  dependencies. For libraries which provide both a Python and an npm package
   (e.g. `yelp-styleguide`), those versions should match the versions in
   `requirements.txt`.
 
-All of these files should be checked into your project.
+All of these files should be checked into your application.
 
 
 ### Adding `check-requirements` to your tests
 
 You should run the executable `check-requirements` in a virtualenv with the
-`check-requirements` package installed as part of your tests.
+`requirements.txt` and `requirements-dev.txt` installed as part of your
+tests.
 
 If you're using `tox`, you can just add it to the end of `commands` and add
 `check-requirements` to your dev requirements file (probably
