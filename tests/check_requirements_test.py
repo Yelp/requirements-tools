@@ -143,6 +143,19 @@ def test_test_top_level_dependencies_not_enough_pinned(in_tmpdir):
     )
 
 
+def test_test_top_level_dependencies_unmet_dependency(in_tmpdir):
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-unmet-deps')
+    in_tmpdir.join('requirements.txt').write('pkg-unmet-deps==1.0')
+    with pytest.raises(AssertionError) as excinfo:
+        main.test_top_level_dependencies()
+    assert excinfo.value.args == (
+        'Unmet dependency detected!\n'
+        'Somehow `missing-dependency` is not installed!\n'
+        '  (from pkg-unmet-deps)\n'
+        'Are you suffering from https://github.com/pypa/pip/issues/3903?',
+    )
+
+
 @pytest.mark.parametrize('version', ('1.2.3-rc1', '1.2.3rc1'))
 def test_prerelease_name_normalization(in_tmpdir, version):
     in_tmpdir.join('requirements-minimal.txt').write('prerelease-pkg')

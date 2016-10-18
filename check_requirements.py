@@ -193,7 +193,20 @@ def get_pinned_versions_from_requirement(requirement):
             if sub_requirement.key not in already_parsed:
                 requirements_to_parse.append(sub_requirement)
                 already_parsed.add(sub_requirement.key)
-            installed = installed_things[sub_requirement.key]
+            try:
+                installed = installed_things[sub_requirement.key]
+            except KeyError:
+                raise AssertionError(
+                    'Unmet dependency detected!\n'
+                    'Somehow `{}` is not installed!\n'
+                    '  (from {})\n'
+                    'Are you suffering from '
+                    'https://github.com/pypa/pip/issues/3903?'.format(
+                        sub_requirement.key,
+                        '{}[{}]'.format(req.key, ','.join(req.extras))
+                        if req.extras else req.key,
+                    ),
+                )
             expected_pinned.add(
                 '{}=={}'.format(installed.key, installed.version)
             )
