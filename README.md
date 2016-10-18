@@ -5,6 +5,16 @@ check-requirements tests for problems with requirements. It's intended to be
 run as part of your project's tests.
 
 
+## What is it useful for?
+
+check-requirements is for *applications only*.  In applications you want to
+ensure repeatable builds.
+
+In libraries, you want to maximize compatibilty and know about
+incompatibilities with other libraries as soon as possible.  In libraries the
+best practices is to not pin requirements (see below for definitions).
+
+
 ## What it does
 
 * Checks for requirements listed in `requirements.txt` but not
