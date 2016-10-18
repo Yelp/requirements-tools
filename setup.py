@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
     name='check_requirements',
     description='Console script to help with testing requirements.',
-    version='0.7.0',
+    version='0.7.1',
     classifiers=[
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
