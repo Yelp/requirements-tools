@@ -9,6 +9,7 @@ ALL_PACKAGES = (
     'pkg-with-deps', 'pkg-dep-1', 'pkg-dep-2',
     'other-pkg-with-deps', 'other-dep-1',
     'pkg-unmet-deps',
+    'pkg-with-extras',
 )
 
 

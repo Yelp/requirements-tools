@@ -24,8 +24,12 @@ REQUIREMENTS_FILES = frozenset(('requirements.txt', 'requirements-dev.txt'))
 
 def parse_requirement(req):
     dumb_parse = pkg_resources.Requirement.parse(req)
+    if dumb_parse.extras:
+        extras = '[{}]'.format(','.join(dumb_parse.extras))
+    else:
+        extras = ''
     return pkg_resources.Requirement.parse(
-        dumb_parse.project_name + ','.join(
+        dumb_parse.project_name + extras + ','.join(
             operator + pkg_resources.safe_version(version)
             for operator, version in dumb_parse.specs
         )
@@ -184,9 +188,8 @@ def test_requirements_pinned():
 
 def get_pinned_versions_from_requirement(requirement):
     expected_pinned = set()
-    parsed = parse_requirement(requirement)
-    requirements_to_parse = [parsed]
-    already_parsed = {parsed.key}
+    requirements_to_parse = [requirement]
+    already_parsed = {requirement.key}
     while requirements_to_parse:
         req = requirements_to_parse.pop()
         installed_req = installed_things[req.key]
@@ -225,7 +228,7 @@ def _expected_pinned(filename):
     ret = set()
     for req, _ in get_raw_requirements(filename):
         ret.add('{}=={}'.format(req.key, installed_things[req.key].version))
-        ret |= get_pinned_versions_from_requirement(req.key)
+        ret |= get_pinned_versions_from_requirement(req)
     return ret
 
 
