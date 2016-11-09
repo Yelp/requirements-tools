@@ -126,6 +126,16 @@ def test_test_top_level_dependencies(in_tmpdir):
     main.test_top_level_dependencies()
 
 
+def test_test_top_level_dependencies_with_extras(in_tmpdir):
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-with-extras[extra]')
+    in_tmpdir.join('requirements.txt').write(
+        'pkg-with-extras==0.1.0\n'
+        'pkg-dep-1==1.0.0\n'
+    )
+    # Should pass
+    main.test_top_level_dependencies()
+
+
 def test_test_top_level_dependencies_not_enough_pinned(in_tmpdir):
     # So we don't skip
     in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
@@ -375,7 +385,9 @@ def in_tmpdir(tmpdir):
 
 
 def test_get_pinned_versions_from_requirement():
-    result = main.get_pinned_versions_from_requirement('pkg-with-deps')
+    result = main.get_pinned_versions_from_requirement(
+        main.parse_requirement('pkg-with-deps'),
+    )
     # These are to make this not flaky in future when things change
     assert isinstance(result, set)
     result = sorted(result)
@@ -386,7 +398,9 @@ def test_get_pinned_versions_from_requirement():
 
 def test_get_pinned_versions_from_requirement_circular():
     # Used to hang forever
-    assert main.get_pinned_versions_from_requirement('sphinx')
+    assert main.get_pinned_versions_from_requirement(
+        main.parse_requirement('sphinx'),
+    )
 
 
 def test_format_versions_on_lines_with_dashes_trivial():
