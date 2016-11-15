@@ -127,10 +127,27 @@ def test_test_top_level_dependencies(in_tmpdir):
 
 
 def test_test_top_level_dependencies_with_extras(in_tmpdir):
-    in_tmpdir.join('requirements-minimal.txt').write('pkg-with-extras[extra]')
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-with-extras[extra1]')
     in_tmpdir.join('requirements.txt').write(
         'pkg-with-extras==0.1.0\n'
         'pkg-dep-1==1.0.0\n'
+    )
+    # Should pass
+    main.test_top_level_dependencies()
+
+
+def test_test_top_level_dependencies_with_depends_on_extras(in_tmpdir):
+    # see testing/depends-on-pkg-with-extras/setup.py for details on
+    # the structure of this pkg
+    in_tmpdir.join('requirements-minimal.txt').write(
+        'depends-on-pkg-with-extras'
+    )
+    in_tmpdir.join('requirements.txt').write(
+        'depends-on-pkg-with-extras==3.1.4\n'
+        'pkg-with-extras==0.1.0\n'
+        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-2==2.0.0\n'
+        'prerelease-pkg==1.2.3-rc1\n'
     )
     # Should pass
     main.test_top_level_dependencies()
@@ -385,16 +402,28 @@ def in_tmpdir(tmpdir):
         yield tmpdir
 
 
-def test_get_pinned_versions_from_requirement():
+@pytest.mark.parametrize(
+    'requirement, expected_pkgs',
+    (
+        # basic case, check all deps captured
+        ('pkg-with-deps', ['pkg-dep-1', 'pkg-dep-2']),
+        # case with multiple extras, check all extras captured
+        (
+            'depends-on-pkg-with-extras',
+            ['pkg-dep-1', 'pkg-dep-2', 'pkg-with-extras', 'prerelease-pkg'],
+        ),
+    ),
+)
+def test_get_pinned_versions_from_requirement(requirement, expected_pkgs):
     result = main.get_pinned_versions_from_requirement(
-        main.parse_requirement('pkg-with-deps'),
+        main.parse_requirement(requirement),
     )
     # These are to make this not flaky in future when things change
     assert isinstance(result, set)
     result = sorted(result)
     split = [req.split('==') for req in result]
     packages = [package for package, _ in split]
-    assert packages == ['pkg-dep-1', 'pkg-dep-2']
+    assert packages == expected_pkgs
 
 
 def test_get_pinned_versions_from_requirement_circular():
