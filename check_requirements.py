@@ -191,26 +191,19 @@ def get_pinned_versions_from_requirement(requirement):
     requirements_to_parse = [requirement]
 
     # Need both key and extras (e.g., foo[bar]) to represent a
-    # requirement. already_parsed tracks all extras values seen
-    # for each requirement key.
-    # Note that installing foo[bar] installs foo, so we always
-    # include the extras=() empty tuple.
-    already_parsed = defaultdict(lambda: {()})
-    # update (not add) b/c extras can have many entries, but their
-    # order of processing doesn't matter
-    already_parsed[requirement.key].update(requirement.extras)
+    # requirement; else we would skip foo[bar] after seeing foo.
+    already_parsed = {(requirement.key, requirement.extras)}
     while requirements_to_parse:
         req = requirements_to_parse.pop()
         installed_req = installed_things[req.key]
         for sub_requirement in installed_req.requires(req.extras):
-            if (sub_requirement.key not in already_parsed or
-                    sub_requirement.extras not in
-                    already_parsed[sub_requirement.key]):
+            sub_requirement_entry = (
+                sub_requirement.key,
+                sub_requirement.extras,
+            )
+            if sub_requirement_entry not in already_parsed:
                 requirements_to_parse.append(sub_requirement)
-                # no-op to value if extras is () b/c {()}.update(()) is {()}
-                already_parsed[sub_requirement.key].update(
-                    sub_requirement.extras
-                )
+                already_parsed.add(sub_requirement_entry)
             try:
                 installed = installed_things[sub_requirement.key]
             except KeyError:

@@ -137,13 +137,11 @@ def test_test_top_level_dependencies_with_extras(in_tmpdir):
 
 
 def test_test_top_level_dependencies_with_depends_on_extras(in_tmpdir):
-    # see testing/depends-on-pkg-with-extras/setup.py for details on
-    # the structure of this pkg
     in_tmpdir.join('requirements-minimal.txt').write(
         'depends-on-pkg-with-extras'
     )
     in_tmpdir.join('requirements.txt').write(
-        'depends-on-pkg-with-extras==3.1.4\n'
+        'depends-on-pkg-with-extras==3.0.0\n'
         'pkg-with-extras==0.1.0\n'
         'pkg-dep-1==1.0.0\n'
         'pkg-dep-2==2.0.0\n'
@@ -403,7 +401,7 @@ def in_tmpdir(tmpdir):
 
 
 @pytest.mark.parametrize(
-    'requirement, expected_pkgs',
+    ('requirement', 'expected_pkgs'),
     (
         # basic case, check all deps captured
         ('pkg-with-deps', ['pkg-dep-1', 'pkg-dep-2']),
