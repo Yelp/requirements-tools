@@ -293,10 +293,11 @@ def test_top_level_dependencies():
 
         if pinned_but_not_required:
             raise AssertionError(
-                'Requirements are pinned in {pin} but are not depended '
-                'on in {minimal}\n'
-                '(Probably need to add something to {minimal})\n'
-                '(or remove from {pin}):\n'
+                'Requirements are pinned in {pin} but are not depended on in {minimal}!\n'  # noqa
+                '\n'
+                'Usually this happens because you upgraded some other dependency, and now no longer require these.\n'  # noqa
+                "If that's the case, you should remove these from {pin}.\n"  # noqa
+                'Otherwise, if you *do* need these packages, then add them to {minimal}.\n'  # noqa
                 '{}'.format(
                     format_versions_on_lines_with_dashes(
                         pinned_but_not_required,

@@ -263,11 +263,11 @@ def test_test_top_level_dependencies_overlapping_prod_dev_deps(in_tmpdir):
     # TODO: this exception is misleading, ideally it should tell you that
     # you don't need to pin it in reqs-dev.txt if it's also a prod dep
     assert excinfo.value.args == (
-        'Requirements are pinned in requirements-dev.txt '
-        'but are not depended on in requirements-dev-minimal.txt\n'
-        '(Probably need to add something to '
-        'requirements-dev-minimal.txt)\n'
-        '(or remove from requirements-dev.txt):\n'
+        'Requirements are pinned in requirements-dev.txt but are not depended on in requirements-dev-minimal.txt!\n'  # noqa
+        '\n'
+        'Usually this happens because you upgraded some other dependency, and now no longer require these.\n'  # noqa
+        "If that's the case, you should remove these from requirements-dev.txt.\n"  # noqa
+        'Otherwise, if you *do* need these packages, then add them to requirements-dev-minimal.txt.\n'  # noqa
         '\t- pkg-dep-1==1.0.0',
     )
 
@@ -302,12 +302,13 @@ def test_test_top_level_dependencies_too_muchh_pinned(in_tmpdir):
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
-    assert excinfo.value.args == (
-        'Requirements are pinned in requirements.txt but are not depended '
-        'on in requirements-minimal.txt\n'
-        '(Probably need to add something to requirements-minimal.txt)\n'
-        '(or remove from requirements.txt):\n'
-        '\t- other-dep-1==1.0.0',
+    assert excinfo.value.args[0] == (
+        'Requirements are pinned in requirements.txt but are not depended on in requirements-minimal.txt!\n'  # noqa
+        '\n'
+        'Usually this happens because you upgraded some other dependency, and now no longer require these.\n'  # noqa
+        "If that's the case, you should remove these from requirements.txt.\n"  # noqa
+        'Otherwise, if you *do* need these packages, then add them to requirements-minimal.txt.\n'  # noqa
+        '\t- other-dep-1==1.0.0'
     )
 
 
