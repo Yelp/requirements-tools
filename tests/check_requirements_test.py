@@ -403,9 +403,7 @@ def in_tmpdir(tmpdir):
 @pytest.mark.parametrize(
     ('requirement', 'expected_pkgs'),
     (
-        # basic case, check all deps captured
         ('pkg-with-deps', ['pkg-dep-1', 'pkg-dep-2']),
-        # case with multiple extras, check all extras captured
         (
             'depends-on-pkg-with-extras',
             ['pkg-dep-1', 'pkg-dep-2', 'pkg-with-extras', 'prerelease-pkg'],
