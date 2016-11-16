@@ -189,14 +189,15 @@ def test_requirements_pinned():
 def get_pinned_versions_from_requirement(requirement):
     expected_pinned = set()
     requirements_to_parse = [requirement]
-    already_parsed = {requirement.key}
+    already_parsed = {(requirement.key, requirement.extras)}
     while requirements_to_parse:
         req = requirements_to_parse.pop()
         installed_req = installed_things[req.key]
         for sub_requirement in installed_req.requires(req.extras):
-            if sub_requirement.key not in already_parsed:
+            key = (sub_requirement.key, sub_requirement.extras)
+            if key not in already_parsed:
                 requirements_to_parse.append(sub_requirement)
-                already_parsed.add(sub_requirement.key)
+                already_parsed.add(key)
             try:
                 installed = installed_things[sub_requirement.key]
             except KeyError:
