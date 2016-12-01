@@ -225,9 +225,15 @@ def format_versions_on_lines_with_dashes(versions):
     )
 
 
-def _expected_pinned(filename):
+def _expected_pinned(filename, pin_filename):
     ret = set()
     for req, _ in get_raw_requirements(filename):
+        if req.key not in installed_things:
+            raise AssertionError(
+                'A dependency listed in {} is not installed.\n'
+                'Is it missing from {}?\n'
+                '\t- {}\n'.format(filename, pin_filename, req.key),
+            )
         ret.add('{}=={}'.format(req.key, installed_things[req.key].version))
         ret |= get_pinned_versions_from_requirement(req)
     return ret
@@ -247,7 +253,9 @@ def test_top_level_dependencies():
     ):  # pragma: no cover
         pytest.skip('No requirements files')
 
-    expected_pinned_prod = _expected_pinned('requirements-minimal.txt')
+    expected_pinned_prod = _expected_pinned(
+        'requirements-minimal.txt', 'requirements.txt',
+    )
     environments = [
         (
             expected_pinned_prod,
@@ -257,7 +265,9 @@ def test_top_level_dependencies():
     ]
 
     if os.path.exists('requirements-dev-minimal.txt'):
-        expected_pinned_dev = _expected_pinned('requirements-dev-minimal.txt')
+        expected_pinned_dev = _expected_pinned(
+            'requirements-dev-minimal.txt', 'requirements-dev.txt',
+        )
         # if there are overlapping prod/dev deps, only list in prod
         # requirements
         expected_pinned_dev -= expected_pinned_prod
