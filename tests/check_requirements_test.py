@@ -151,6 +151,18 @@ def test_test_top_level_dependencies_with_depends_on_extras(in_tmpdir):
     main.test_top_level_dependencies()
 
 
+def test_test_top_level_dependencies_minimal_req_not_installed(in_tmpdir):
+    in_tmpdir.join('requirements-minimal.txt').write('not-installed-pkg')
+    in_tmpdir.join('requirements.txt').ensure()
+    with pytest.raises(AssertionError) as excinfo:
+        main.test_top_level_dependencies()
+    assert excinfo.value.args == (
+        'A dependency listed in requirements-minimal.txt is not installed.\n'
+        'Is it missing from requirements.txt?\n'
+        '\t- not-installed-pkg\n',
+    )
+
+
 def test_test_top_level_dependencies_not_enough_pinned(in_tmpdir):
     # So we don't skip
     in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
