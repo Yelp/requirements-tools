@@ -1,41 +1,43 @@
-check-requirements
+requirements-tools
 ========
 
-check-requirements tests for problems with requirements. It's intended to be
-run as part of your application's tests.
+requirements-tools contains scripts for working with Python requirements,
+primarily in applications.
+
+It consists of three scripts:
+
+  * `check-requirements`
+  * `upgrade-requirements`
+  * `visualize-requirements`
+
+These are discussed in detail below.
 
 
-## What is it useful for?
+## Our stance on pinning requirements
 
-check-requirements is for *applications only*.  In applications you want to
-ensure repeatable builds.
+In applications, you want to ensure repeatable builds. It's important that the
+version of code you tested with is the same version that goes to production,
+and that upgrades of third-party packages don't break your application. Since
+each commit represents a precise deployment (code and its dependencies), you
+can always easily see what changed between two deployments, and count on being
+able to revert changes.
 
-In libraries, you want to maximize compatibilty and know about
-incompatibilities with other libraries as soon as possible.  In libraries the
-best practices is to not pin requirements (see below for definitions).
+By contrast, in libraries, you want to maximize compatibility and know about
+incompatibilities with other libraries as soon as possible. In libraries the
+best practices is to only loosely pin requirements, and only when absolutely
+necessary.
 
-
-## What it does
-
-* Checks for requirements listed in `requirements.txt` but not
-  `requirements-minimal.txt` (probably indicates unused requirements or used
-  requirements that need to be added to `requirements-minimal.txt`).
-
-* Checks for requirements in `requirements-minimal.txt` but not in
-  `requirements.txt` (generally referred to "unpinned" requirements.)
-
-* Checks for dashes instead of underscores in requirement names
-
-* Checks for unpinned requirements or loosely-pinned requirements
+`requirements-tools`
 
 
-## Integrating into your application
-### Recommended requirements setup
+### Recommended requirements setup for applications
 
 The recommended layout for your application is:
 
 * No `setup.py`.  `setup.py` is not entirely useful for applications, we'll
   specify minimal requirements in `requirements-minimal.txt` (see below).
+  (Some applications have special needs for a `setup.py`, and that's fine—but
+  we won't use them for listing requirements).
 
 * `requirements-minimal.txt` contains a list of unpinned (or loosely-pinned)
   top-level requirements needed in production. For example, you might list
@@ -56,9 +58,11 @@ The recommended layout for your application is:
   roll back more easily) and faster virtualenv generation with
   [pip-faster](https://github.com/Yelp/pip-faster).
 
-  It should be possible to automatically generate `requirements.txt` by
+  In principle, it is possible to automatically generate `requirements.txt` by
   creating a fresh virtualenv, installing your app's dependencies from
-  `requirements-minimal.txt`, and running `pip freeze`.
+  `requirements-minimal.txt`, and running `pip freeze`. We provide a script
+  `upgrade-requirements` which effectively does this (but better handling some
+  edge cases).
 
 * `requirements-dev.txt` is just like `requirements.txt` but for dev
   dependencies (and dev sub-dependencies).
@@ -71,6 +75,30 @@ The recommended layout for your application is:
 All of these files should be checked into your application.
 
 
+## check-requirements
+
+check-requirements tests for problems with requirements. It's intended to be
+run as part of your application's tests.
+
+If your application passes check-requirements, then you have a high degree of
+assurance that it correctly and fully pins its requirements.
+
+
+### What it does
+
+* Checks for requirements listed in `requirements.txt` but not
+  `requirements-minimal.txt` (probably indicates unused requirements or used
+  requirements that need to be added to `requirements-minimal.txt`).
+
+* Checks for requirements in `requirements-minimal.txt` but not in
+  `requirements.txt` (generally referred to "unpinned" requirements.)
+
+* Checks that package names are properly normalized (e.g. using dashes instead
+  of underscores)
+
+* Checks for unpinned requirements or loosely-pinned requirements
+
+
 ### Adding `check-requirements` to your tests
 
 You should run the executable `check-requirements` in a virtualenv with the
@@ -78,5 +106,28 @@ You should run the executable `check-requirements` in a virtualenv with the
 tests.
 
 If you're using `tox`, you can just add it to the end of `commands` and add
-`check-requirements` to your dev requirements file (probably
+`requirements-tools` to your dev requirements file (probably
 `requirements-dev.txt`).
+
+
+## upgrade-requirements
+
+upgrade-requirements uses the requirements structure described above in order
+to upgrade both dev and prod dependencies while pruning no-longer-needed
+dependencies and automatically pinning any added dependencies.
+
+To use upgrade-requirements, install `requirements-tools` into your virtualenv
+(you probably already have this, if you're using check-requirements) and run
+`upgrade-requirements`.
+
+If your project doesn't use the public PyPI, you can set the PyPI server using
+the option `-i https://pypi.example.com/simple`.
+
+
+## visualize-requirements
+
+visualize-requirements prints a visual representation of your requirements,
+making it easy to see why a certain package is being installed (what depends on
+it).
+
+To use it, just call `visualize-requirements requirements.txt`.

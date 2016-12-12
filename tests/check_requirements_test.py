@@ -1,11 +1,10 @@
-# pylint:disable=redefined-outer-name
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import pkg_resources
 import pytest
 
-import check_requirements as main
+from requirements_tools import check_requirements as main
 
 
 @pytest.mark.parametrize(
