@@ -14,7 +14,7 @@ import pytest
 
 installed_things = {
     pkg.key: pkg
-    for pkg in pkg_resources.working_set  # pylint:disable=not-an-iterable
+    for pkg in pkg_resources.working_set
 }
 REQUIREMENTS_FILES = frozenset(('requirements.txt', 'requirements-dev.txt'))
 
@@ -282,8 +282,7 @@ def test_top_level_dependencies():
             'To have your dev dependencies checked, create a file named\n'
             'requirements-dev-minimal.txt listing your minimal dev '
             'dependencies.\n'
-            'See '
-            'https://gitweb.yelpcorp.com/?p=python_packages/check_requirements.git;a=blob;f=README.md'  # noqa
+            'See https://github.com/Yelp/requirements-tools'
             '\033[0m'
         )
 

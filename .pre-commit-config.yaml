@@ -1,4 +1,4 @@
--   repo: git@git.yelpcorp.com:mirrors/pre-commit/pre-commit-hooks
+-   repo: https://github.com/pre-commit/pre-commit-hooks
     sha: 616c1ebd1898c91de9a0548866a59cbd9f4547f6
     hooks:
     -   id: trailing-whitespace
@@ -17,7 +17,7 @@
         language_version: python2.7
     -   id: flake8
         language_version: python2.7
--   repo: git@git.yelpcorp.com:mirrors/asottile/reorder_python_imports
+-   repo: https://github.com/asottile/reorder_python_imports
     sha: 3d86483455ab5bd06cc1069fdd5ac57be5463f10
     hooks:
     -   id: reorder-python-imports
