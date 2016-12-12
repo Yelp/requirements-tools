@@ -17,6 +17,7 @@ setup(
     packages=find_packages(exclude=('tests*',)),
     entry_points={
         'console_scripts': [
+            'check-all-wheels = requirements_tools.check_all_wheels:main',
             'check-requirements = requirements_tools.check_requirements:main',
             'upgrade-requirements = requirements_tools.upgrade_requirements:main',  # noqa
             'visualize-requirements = requirements_tools.visualize_requirements:main',  # noqa
