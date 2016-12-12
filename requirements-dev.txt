@@ -5,7 +5,6 @@ coverage
 flake8
 mock
 pre-commit
-pylint
 pytest
 # Triggers WEBCORE-3023
 setuptools>=18.5
