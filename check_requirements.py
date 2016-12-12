@@ -4,11 +4,8 @@ from __future__ import unicode_literals
 
 import io
 import itertools
-import json
 import os.path
-import subprocess
 import sys
-from collections import defaultdict
 from operator import attrgetter
 
 import pkg_resources
@@ -352,171 +349,11 @@ def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
                 )
 
 
-def test_javascript_package_versions():
-    """Make sure package.json versions agree with python versions."""
-    if not os.path.exists('package.json'):  # pragma: no cover
-        pytest.skip('No JavaScript dependencies (package.json)')
-
-    js_packages = defaultdict(set)
-
-    with io.open('package.json') as f:
-        contents = json.load(f)
-    for package_name, version in contents.get('dependencies', {}).items():
-        # Normalize underscores to dashes
-        package_name = package_name.replace('_', '-')
-        js_packages[package_name].add(version)
-
-    for package_name, versions in js_packages.items():
-        # Check against Python version
-        version, = versions
-        if package_name in installed_things:
-            python_version = installed_things[package_name].version
-            if python_version != version:
-                raise AssertionError(
-                    'The package "{}" is both a JavaScript and Python package.\n'  # noqa
-                    "The version installed by Python must match the JavaScript version, but it currently doesn't!\n"  # noqa
-                    '  JavaScript version: {}\n'
-                    '  Python version: {}\n'
-                    'Check requirements.txt and package.json!'.format(
-                        package_name, version, python_version,
-                    )
-                )
-
-
-def parse_npm_dependency_tree(tree):
-    """Parse output of npm list --json.
-
-    Return format is a dictionary with one key per package. Each value is
-    another dictionary of installed versions for that package. The values of
-    the inner dictionary are the set of packages that depended on them.
-
-    For example:
-    {
-        'package': {
-            '1.3': {'yelp-derp@1.2.3', 'express@9.4'},
-            '4.5.9': {'something@4'},
-        },
-    }
-    """
-    ret = defaultdict(lambda: defaultdict(set))
-
-    def inner(cur, name=None, parent=None):
-        if name:
-            # We exclude jquery's tree because it pulls in 75 dependencies
-            # which we don't want to pin ourselves. Besides, we don't actually
-            # use jQuery in prod (we load it from a CDN).
-            if name == 'jquery':
-                return
-            if tree is parent:
-                parent_dep = '(your app)@*'
-            else:
-                parent_dep = '{}@{}'.format(
-                    parent['name'], parent.get('version', '*'),
-                )
-            ret[name][cur['version']].add(parent_dep)
-            cur['name'] = name
-        for dep_name, dep in cur.get('dependencies', {}).items():
-            inner(dep, name=dep_name, parent=cur)
-    inner(tree)
-    return ret
-
-
-def npm_installed_reason(npm_list, package, version):
-    """Return string for why a package is installed."""
-    if package not in npm_list:
-        return ''
-
-    wanted_by = npm_list[package][version]
-    first_wanter = sorted(wanted_by)[0]
-    return '<-{}{}'.format(
-        first_wanter,
-        npm_installed_reason(npm_list, *first_wanter.split('@')),
-    )
-
-
 def bold(text):  # pragma: no cover
     if sys.stderr.isatty():
         return '\033[1m{}\033[0m'.format(text)
     else:
         return text
-
-
-def test_all_npm_packages_pinned():
-    if not os.path.exists('package.json'):  # pragma: no cover
-        pytest.skip('No package.json file')
-
-    if not os.path.exists('node_modules'):
-        raise AssertionError(
-            'node_modules not found.  Are you missing a make target?',
-        )
-
-    npm_list = parse_npm_dependency_tree(json.loads(subprocess.check_output(
-        ('npm', 'list', '--json', '--prod'),
-        stderr=open(os.devnull, 'w'),
-    ).decode('UTF-8')))
-
-    package_json = json.load(io.open('package.json'))
-    unpinned = set()
-    for name, versions in npm_list.items():
-        version = sorted(versions.keys())[0]
-        if package_json['dependencies'].get(name) != version:
-            unpinned.add('{} {}'.format(
-                bold('{}@{}'.format(name, version)),
-                npm_installed_reason(npm_list, name, version),
-            ))
-
-    if unpinned:
-        raise AssertionError('Unpinned requirements detected!\n    {}'.format(
-            '\n    '.join(sorted(unpinned)),
-        ))
-
-
-def test_no_conflicting_npm_package_versions():
-    """Check for unsatisfiable version conflicts.
-
-    If two packages depend on different versions of the same library, npm will
-    install two nested copies. This doesn't work for frontend web packages, so
-    we check for it.
-    """
-    if not os.path.exists('package.json'):  # pragma: no cover
-        pytest.skip('No package.json file')
-
-    if not os.path.exists('node_modules'):
-        raise AssertionError(
-            'node_modules not found.  Are you missing a make target?',
-        )
-
-    npm_list = parse_npm_dependency_tree(json.loads(subprocess.check_output(
-        ('npm', 'list', '--json', '--prod'),
-        stderr=open(os.devnull, 'w'),
-    ).decode('UTF-8')))
-
-    duplicates = set()
-    for name, versions in npm_list.items():
-        if len(versions) > 1:
-            duplicates.add(
-                '{} needs multiple versions:\n    {}'.format(
-                    bold(name),
-                    '\n    '.join(
-                        '{} {}'.format(
-                            bold('{}@{}'.format(name, version)),
-                            npm_installed_reason(
-                                npm_list,
-                                name,
-                                version,
-                            ),
-                        )
-                        for version, why in sorted(versions.items())
-                    ),
-                ),
-            )
-
-    if duplicates:
-        raise AssertionError(
-            'Conflicting NPM package requirements detected!\n  {}'.format(
-                '\n  '.join(sorted(duplicates)),
-            ),
-        )
 
 
 def main():  # pragma: no cover
