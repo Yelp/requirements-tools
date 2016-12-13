@@ -1,6 +1,9 @@
 requirements-tools
 ========
 
+[![PyPI version](https://badge.fury.io/py/requirements-tools.svg)](https://pypi.python.org/pypi/requirements-tools)
+[![Build Status](https://travis-ci.org/Yelp/requirements-tools.svg?branch=master)](https://travis-ci.org/Yelp/requirements-tools)
+
 requirements-tools contains scripts for working with Python requirements,
 primarily in applications.
 
