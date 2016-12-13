@@ -4,6 +4,7 @@
     -   id: trailing-whitespace
         language_version: python2.7
     -   id: end-of-file-fixer
+        exclude: ^\.activate\.sh$
         language_version: python2.7
     -   id: autopep8-wrapper
         language_version: python2.7
