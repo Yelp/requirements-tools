@@ -27,8 +27,6 @@ incompatibilities with other libraries as soon as possible. In libraries the
 best practices is to only loosely pin requirements, and only when absolutely
 necessary.
 
-`requirements-tools`
-
 
 ### Recommended requirements setup for applications
 
