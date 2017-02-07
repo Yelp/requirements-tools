@@ -132,3 +132,31 @@ making it easy to see why a certain package is being installed (what depends on
 it).
 
 To use it, just call `visualize-requirements requirements.txt`.
+
+## check-all-wheels
+
+This tool checks whether all of your dependencies are pre-wheeled on the
+remote pypi server.  This is useful while upgrading requirements to verify
+that you won't waste building things from source during installation.
+
+### Checking against an internal pypi server
+
+This script is most useful if you run an internal pypi server and pass the
+`--index-url` argument.
+
+```bash
+check-all-wheels --index-url https://pypi.example.com/simple
+```
+
+### With `pip-custom-platform`
+
+See [asottile/pip-custom-platform](https://github.com/asottile/pip-custom-platform)
+for more details.
+
+```
+# Check that all prebuilt wheels exist on ubuntu xenial
+check-all-wheels \
+    --index-url https://pypi.example.com/simple \
+    --install-deps pip-custom-platform \
+    --pip-tool 'pip-custom-platform --platform linux_ubuntu_16_04_x86_64'
+```
