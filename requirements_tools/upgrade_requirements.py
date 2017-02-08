@@ -93,7 +93,10 @@ def cleanup_dir(dirname):
 def make_virtualenv(args):
     with cleanup_dir(tempfile.mkdtemp()) as tempdir:
         venv, python, pip = dirs(tempdir)
-        print_call('virtualenv', venv, '-p', args.python, '--never-download')
+        print_call(
+            sys.executable, '-m', 'virtualenv', venv,
+            '-p', args.python, '--never-download',
+        )
 
         def pip_install(*argv):
             print_call(pip, 'install', '-i', args.index_url, *argv)
