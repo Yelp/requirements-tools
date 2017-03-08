@@ -152,6 +152,12 @@ def check_requirements_integrity():
         version = to_version(req)
         if version is None:  # Not pinned, just skip
             continue
+        if req.key not in installed_things:
+            raise AssertionError(
+                '{} is required in {}, but is not installed'.format(
+                    req.key, filename,
+                )
+            )
         installed_version = to_version(parse_requirement('{}=={}'.format(
             req.key, installed_things[req.key].version,
         )))
