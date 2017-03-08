@@ -520,3 +520,12 @@ def test_check_requirements_integrity_failing(in_tmpdir):
 def test_check_requirements_integrity_post_version(in_tmpdir, version):
     in_tmpdir.join('requirements.txt').write('chameleon=={}'.format(version))
     main.check_requirements_integrity()
+
+
+def test_check_requirements_integrity_package_not_installed(in_tmpdir):
+    in_tmpdir.join('requirements.txt').write('not-installed==1.0.0')
+    with pytest.raises(AssertionError) as excinfo:
+        main.check_requirements_integrity()
+    assert excinfo.value.args == (
+        'not-installed is required in requirements.txt, but is not installed',
+    )
