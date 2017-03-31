@@ -175,6 +175,32 @@ def check_requirements_integrity():
         )
 
 
+def test_no_duplicate_requirements():
+    duplicates = []
+    for filename in (
+        'requirements-minimal.txt',
+        'requirements.txt',
+        'requirements-dev-minimal.txt',
+        'requirements-dev.txt',
+    ):
+        if not os.path.exists(filename):
+            continue
+        found = set()
+        for req, _ in get_raw_requirements(filename):
+            if req.key in found:
+                duplicates.append((req.key, filename))
+            else:
+                found.add(req.key)
+
+    if duplicates:
+        raise AssertionError(
+            'Requirements appeared more than once in the same file:\n'
+            '{}'.format(''.join(
+                '- {} ({})\n'.format(*duplicate) for duplicate in duplicates
+            ))
+        )
+
+
 def test_requirements_pinned():
     raw_requirements = _get_all_raw_requirements()
     if raw_requirements is None:  # pragma: no cover
