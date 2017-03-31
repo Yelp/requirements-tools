@@ -107,6 +107,30 @@ def test_format_unpinned_requirements():
     )
 
 
+def test_test_no_duplicate_requirements_passing(in_tmpdir):
+    in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
+    in_tmpdir.join('requirements.txt').write('pkg-with-deps==0.1.0')
+    main.test_no_duplicate_requirements()
+
+
+def test_test_no_duplicate_requirements_failing(in_tmpdir):
+    in_tmpdir.join('requirements-minimal.txt').write(
+        'pkg-with-deps\n'
+        'pkg-with-deps\n'
+    )
+    in_tmpdir.join('requirements-dev-minimal.txt').write(
+        'flake8\n'
+        'flake8\n'
+    )
+    with pytest.raises(AssertionError) as excinfo:
+        main.test_no_duplicate_requirements()
+    assert excinfo.value.args == (
+        'Requirements appeared more than once in the same file:\n'
+        '- pkg-with-deps (requirements-minimal.txt)\n'
+        '- flake8 (requirements-dev-minimal.txt)\n',
+    )
+
+
 def test_test_top_level_dependencies(in_tmpdir):
     # So we don't skip
     in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
