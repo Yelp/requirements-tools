@@ -147,6 +147,12 @@ def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
 @pytest.fixture(autouse=True, scope='session')
 def check_requirements_integrity():
     raw_requirements = _get_all_raw_requirements()
+    if not raw_requirements:
+        raise AssertionError(
+            'check-requirements expects at least requirements-minimal.txt '
+            'and requirements.txt',
+        )
+
     incorrect = []
     for req, filename in raw_requirements:
         version = to_version(req)

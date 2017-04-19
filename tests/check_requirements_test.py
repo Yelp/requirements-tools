@@ -528,6 +528,15 @@ def test_check_requirements_integrity_doesnt_care_about_unpinned(in_tmpdir):
     main.check_requirements_integrity()
 
 
+def test_check_integrity_no_files(in_tmpdir):
+    with pytest.raises(AssertionError) as excinfo:
+        main.check_requirements_integrity()
+    assert excinfo.value.args == (
+        'check-requirements expects at least requirements-minimal.txt '
+        'and requirements.txt',
+    )
+
+
 def test_check_requirements_integrity_failing(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('pkg-with-deps==1.0.0')
     with pytest.raises(AssertionError) as excinfo:
