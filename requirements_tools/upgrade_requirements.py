@@ -66,7 +66,8 @@ def installed(requirements_file):
         ))
         for sub in installed_req.requires(req.extras):
             if sub.key not in installed_things:
-                unmet.add('{}{}'.format(sub.key, ','.join(sub.specifier)))
+                specifiers = ','.join(str(s) for s in sub.specifier)
+                unmet.add('{}{}'.format(sub.key, specifiers))
             elif (sub.key, sub.extras) not in already_parsed:
                 requirements_to_parse.append(sub)
                 already_parsed.add((sub.key, sub.extras))
