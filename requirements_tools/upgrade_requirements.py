@@ -17,7 +17,9 @@ installed_things = {pkg.key: pkg for pkg in working_set}
 reqs_filename = 'requirements.txt'
 reqs_dev_filename = 'requirements-dev.txt'
 reqs_minimal_filename = 'requirements-minimal.txt'
+reqs_vcs_filename = 'requirements-vcs.txt'
 reqs_dev_minimal_filename = 'requirements-dev-minimal.txt'
+reqs_dev_vcs_filename = 'requirements-dev-vcs.txt'
 
 
 class NeedsMoreInstalledError(RuntimeError):
@@ -126,8 +128,12 @@ def make_virtualenv(args):
         # Latest pip installs python3.5 wheels
         pip_install('pip', 'setuptools', '--upgrade')
         pip_install('-r', reqs_minimal_filename)
+        if file_exists(reqs_vcs_filename):
+            pip_install('-r', reqs_vcs_filename)
         if file_exists(reqs_dev_minimal_filename):
             pip_install('-r', reqs_dev_minimal_filename)
+        if file_exists(reqs_dev_vcs_filename):
+            pip_install('-r', reqs_dev_vcs_filename)
 
         reexec(
             python, __file__.rstrip('c'),
@@ -168,13 +174,22 @@ def main():
     with cleanup_dir(args.tempdir):
         try:
             reqs = installed(reqs_minimal_filename)
-            reqs_git = set(requirements(reqs_minimal_filename, True))
+
+            if file_exists(reqs_vcs_filename):
+                reqs_git = set(requirements(reqs_vcs_filename, True))
+            else:
+                reqs_git = set()
+
             if file_exists(reqs_dev_minimal_filename):
                 reqs_dev = installed(reqs_dev_minimal_filename)
-                reqs_dev_git = set(requirements(reqs_dev_minimal_filename, True))
             else:
                 reqs_dev = set()
+
+            if file_exists(reqs_dev_vcs_filename):
+                reqs_dev_git = set(requirements(reqs_dev_vcs_filename, True))
+            else:
                 reqs_dev_git = set()
+
         except NeedsMoreInstalledError as e:
             print(color('Installing unmet requirements!', '\033[31m'))
             print('Probably due to https://github.com/pypa/pip/issues/3903')
@@ -197,7 +212,7 @@ def main():
             with open(reqs_filename, 'w') as f:
                 f.write('\n'.join(reqs_full) + '\n')
 
-            create_reqs_dev = file_exists(reqs_dev_minimal_filename)
+            create_reqs_dev = file_exists(reqs_dev_minimal_filename) and file_exists(reqs_dev_vcs_filename)
             if create_reqs_dev:
                 reqs_full_dev = list(reqs_dev - reqs) + list(reqs_dev_git - reqs_git)
                 with open(reqs_dev_filename, 'w') as f:
