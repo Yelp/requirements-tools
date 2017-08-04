@@ -14,6 +14,11 @@ from pkg_resources import working_set
 
 installed_things = {pkg.key: pkg for pkg in working_set}
 
+reqs_filename = 'requirements.txt'
+reqs_dev_filename = 'requirements-dev.txt'
+reqs_minimal_filename = 'requirements-minimal.txt'
+reqs_dev_minimal_filename = 'requirements-dev-minimal.txt'
+
 
 class NeedsMoreInstalledError(RuntimeError):
     pass
@@ -45,16 +50,28 @@ def reexec(*cmd, **kwargs):
     os.execv(cmd[0], cmd)
 
 
-def requirements(requirements_filename):
+def requirements(requirements_filename, vcs=False):
     with open(requirements_filename) as requirements_file:
         for line in requirements_file:
-            if line.strip() and not line.startswith(('#', '-e')):
-                yield Requirement.parse(line.strip())
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('#'):
+                continue
+            vcs_prefixes = ('-e', 'git:', 'git+', 'hg+', 'svn+', 'bzr+')
+            if not vcs and line.startswith(vcs_prefixes):
+                continue
+            if vcs and not line.startswith(vcs_prefixes):
+                continue
+            yield line
 
 
 def installed(requirements_file):
     expected_pinned = set()
-    requirements_to_parse = list(requirements(requirements_file))
+    requirements_to_parse = list([
+        Requirement.parse(r)
+        for r in requirements(requirements_file)
+    ])
     already_parsed = {(req.key, req.extras) for req in requirements_to_parse}
     unmet = set()
 
@@ -91,6 +108,10 @@ def cleanup_dir(dirname):
         shutil.rmtree(dirname)
 
 
+def file_exists(path):
+    return os.path.exists(path) and os.path.isfile(path)
+
+
 def make_virtualenv(args):
     with cleanup_dir(tempfile.mkdtemp()) as tempdir:
         venv, python, pip = dirs(tempdir)
@@ -104,8 +125,9 @@ def make_virtualenv(args):
 
         # Latest pip installs python3.5 wheels
         pip_install('pip', 'setuptools', '--upgrade')
-        pip_install('-r', 'requirements-minimal.txt')
-        pip_install('-r', 'requirements-dev-minimal.txt')
+        pip_install('-r', reqs_minimal_filename)
+        if file_exists(reqs_dev_minimal_filename):
+            pip_install('-r', reqs_dev_minimal_filename)
 
         reexec(
             python, __file__.rstrip('c'),
@@ -136,8 +158,7 @@ def main():
     parser.add_argument('--tempdir', help=argparse.SUPPRESS)
     args = parser.parse_args()
 
-    assert os.path.exists('requirements-minimal.txt')
-    assert os.path.exists('requirements-dev-minimal.txt')
+    assert file_exists(reqs_minimal_filename)
 
     if args.tempdir is None:
         make_virtualenv(args)  # Never returns
@@ -146,8 +167,14 @@ def main():
 
     with cleanup_dir(args.tempdir):
         try:
-            reqs = installed('requirements-minimal.txt')
-            reqs_dev = installed('requirements-dev-minimal.txt')
+            reqs = installed(reqs_minimal_filename)
+            reqs_git = set(requirements(reqs_minimal_filename, True))
+            if file_exists(reqs_dev_minimal_filename):
+                reqs_dev = installed(reqs_dev_minimal_filename)
+                reqs_dev_git = set(requirements(reqs_dev_minimal_filename, True))
+            else:
+                reqs_dev = set()
+                reqs_dev_git = set()
         except NeedsMoreInstalledError as e:
             print(color('Installing unmet requirements!', '\033[31m'))
             print('Probably due to https://github.com/pypa/pip/issues/3903')
@@ -165,21 +192,31 @@ def main():
                 '--exec-limit', str(args.exec_limit),
                 reason='Unmet dependencies',
             )
+        else:
+            reqs_full = list(reqs) + list(reqs_git)
+            with open(reqs_filename, 'w') as f:
+                f.write('\n'.join(reqs_full) + '\n')
 
-        with open('requirements.txt', 'w') as f:
-            f.write('\n'.join(reqs) + '\n')
-        with open('requirements-dev.txt', 'w') as f:
-            f.write('\n'.join(reqs_dev - reqs) + '\n')
+            create_reqs_dev = file_exists(reqs_dev_minimal_filename)
+            if create_reqs_dev:
+                reqs_full_dev = list(reqs_dev - reqs) + list(reqs_dev_git - reqs_git)
+                with open(reqs_dev_filename, 'w') as f:
+                    f.write('\n'.join(reqs_full_dev) + '\n')
 
-        with open(os.devnull, 'w') as devnull:
-            subprocess.check_call(
-                (pip, 'install', 'pre-commit-hooks'),
-                stdout=devnull, stderr=devnull,
-            )
-        subprocess.call((
-            os.path.join(venv, 'bin', 'requirements-txt-fixer'),
-            'requirements.txt', 'requirements-dev.txt',
-        ))
+            with open(os.devnull, 'w') as devnull:
+                subprocess.check_call(
+                    (pip, 'install', 'pre-commit-hooks'),
+                    stdout=devnull, stderr=devnull,
+                )
+
+            reqs_filenames = [reqs_filename]
+            if create_reqs_dev:
+                reqs_filenames += [reqs_dev_filename]
+
+            subprocess.call((
+                os.path.join(venv, 'bin', 'requirements-txt-fixer'),
+                *reqs_filenames,
+            ))
 
 
 if __name__ == '__main__':
