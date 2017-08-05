@@ -212,9 +212,14 @@ def main():
             with open(reqs_filename, 'w') as f:
                 f.write('\n'.join(reqs_full) + '\n')
 
-            create_reqs_dev = file_exists(reqs_dev_minimal_filename) and file_exists(reqs_dev_vcs_filename)
+            create_reqs_dev = file_exists(
+                reqs_dev_minimal_filename
+            ) and file_exists(
+                reqs_dev_vcs_filename
+            )
             if create_reqs_dev:
-                reqs_full_dev = list(reqs_dev - reqs) + list(reqs_dev_git - reqs_git)
+                reqs_full_dev = list(reqs_dev - reqs) + \
+                    list(reqs_dev_git - reqs_git)
                 with open(reqs_dev_filename, 'w') as f:
                     f.write('\n'.join(reqs_full_dev) + '\n')
 
@@ -224,14 +229,11 @@ def main():
                     stdout=devnull, stderr=devnull,
                 )
 
-            reqs_filenames = [reqs_filename]
+            popenargs = (os.path.join(
+                venv, 'bin', 'requirements-txt-fixer'), reqs_filename)
             if create_reqs_dev:
-                reqs_filenames += [reqs_dev_filename]
-
-            subprocess.call((
-                os.path.join(venv, 'bin', 'requirements-txt-fixer'),
-                *reqs_filenames,
-            ))
+                popenargs = popenargs + (create_reqs_dev,)
+            subprocess.call(popenargs)
 
 
 if __name__ == '__main__':
