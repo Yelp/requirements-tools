@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import os
+import shlex
 import shutil
 import subprocess
 
@@ -31,7 +32,7 @@ def main():
 
     silent('pip', 'install', 'pip', '--upgrade')
     silent('pip', 'install', '-i', args.index_url, args.install_deps)
-    cmd = tuple(args.pip_tool.split(' ')) + (
+    cmd = tuple(shlex.split(args.pip_tool)) + (
         'download', '--dest', DISTS_DIR,
         '-r', 'requirements.txt', '-r', 'requirements-dev.txt',
         '-i', args.index_url,
