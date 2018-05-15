@@ -3,6 +3,7 @@ import argparse
 import contextlib
 import os
 import pipes
+import shlex
 import shutil
 import subprocess
 import sys
@@ -78,8 +79,13 @@ def installed(requirements_file):
         return expected_pinned
 
 
-def dirs(tmp):
-    dirnames = ('venv', 'venv/bin/python', 'venv/bin/pip')
+def venv_paths(tmp, pip_tool):
+    dirnames = (
+        'venv',
+        'venv/bin/python',
+        'venv/bin/pip',
+        'venv/bin/' + pip_tool
+    )
     return tuple(os.path.join(tmp, d) for d in dirnames)
 
 
@@ -93,19 +99,23 @@ def cleanup_dir(dirname):
 
 def make_virtualenv(args):
     with cleanup_dir(tempfile.mkdtemp()) as tempdir:
-        venv, python, pip = dirs(tempdir)
+        venv, python, pip, pip_tool = venv_paths(tempdir, args.pip_tool)
+        pip_tool = tuple(shlex.split(pip_tool))
+
         print_call(
             sys.executable, '-m', 'virtualenv', venv,
             '-p', args.python, '--never-download',
         )
 
-        def pip_install(*argv):
-            print_call(pip, 'install', '-i', args.index_url, *argv)
+        def pip_install(pip, *argv):
+            print_call(*(pip + ('install', '-i', args.index_url) + argv))
 
         # Latest pip installs python3.5 wheels
-        pip_install('pip', 'setuptools', '--upgrade')
-        pip_install('-r', 'requirements-minimal.txt')
-        pip_install('-r', 'requirements-dev-minimal.txt')
+        pip_install(
+            (pip,), '--upgrade', 'setuptools', 'pip', args.install_deps
+        )
+        pip_install(pip_tool, '-r', 'requirements-minimal.txt')
+        pip_install(pip_tool, '-r', 'requirements-dev-minimal.txt')
 
         reexec(
             python, __file__.rstrip('c'),
@@ -114,6 +124,8 @@ def make_virtualenv(args):
             '--index-url', args.index_url,
             '--exec-count', str(args.exec_count),
             '--exec-limit', str(args.exec_limit),
+            '--pip-tool', args.pip_tool,
+            '--install-deps', args.install_deps,
             reason='to use the virtualenv python',
         )
 
@@ -134,6 +146,8 @@ def main():
         '--exec-count', type=int, default=0, help=argparse.SUPPRESS,
     )
     parser.add_argument('--tempdir', help=argparse.SUPPRESS)
+    parser.add_argument('--pip-tool', default='pip')
+    parser.add_argument('--install-deps', default='pip')
     args = parser.parse_args()
 
     assert os.path.exists('requirements-minimal.txt')
@@ -142,7 +156,8 @@ def main():
     if args.tempdir is None:
         make_virtualenv(args)  # Never returns
 
-    venv, python, pip = dirs(args.tempdir)
+    venv, python, pip, pip_tool = venv_paths(args.tempdir, args.pip_tool)
+    pip_tool = tuple(shlex.split(pip_tool))
 
     with cleanup_dir(args.tempdir):
         try:
@@ -155,7 +170,9 @@ def main():
             if new_exec_count > args.exec_limit:
                 raise AssertionError('--exec-limit depth limit exceeded')
             unmet, = e.args
-            print_call(pip, 'install', '-i', args.index_url, *unmet)
+            print_call(
+                *(pip_tool + ('install', '-i', args.index_url) + tuple(unmet))
+            )
             reexec(
                 python, __file__.rstrip('c'),
                 '--exec-count', str(new_exec_count),
@@ -173,7 +190,7 @@ def main():
 
         with open(os.devnull, 'w') as devnull:
             subprocess.check_call(
-                (pip, 'install', 'pre-commit-hooks'),
+                pip_tool + ('install', 'pre-commit-hooks'),
                 stdout=devnull, stderr=devnull,
             )
         subprocess.call((
