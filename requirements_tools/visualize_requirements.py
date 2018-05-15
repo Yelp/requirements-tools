@@ -27,14 +27,14 @@ def get_raw_requirements(requirements_file):
     unparsed_requirements_lines = get_lines_from_file(requirements_file)
 
     return pkg_resources.parse_requirements(
-        '\n'.join(unparsed_requirements_lines)
+        '\n'.join(unparsed_requirements_lines),
     )
 
 
 def print_req(req, depth, seen=()):
     if req.key in seen:
         circular = ' (circular: {})'.format(
-            '->'.join(seen[seen.index(req.key):] + (req.key,))
+            '->'.join(seen[seen.index(req.key):] + (req.key,)),
         )
     else:
         circular = ''
@@ -43,7 +43,7 @@ def print_req(req, depth, seen=()):
         unmet = ' {}{}{}'.format(
             '\033[41m' if color else '',
             '(UNMET!)',
-            '\033[m' if color else ''
+            '\033[m' if color else '',
         )
     else:
         unmet = ''

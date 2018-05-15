@@ -116,11 +116,11 @@ def test_test_no_duplicate_requirements_passing(in_tmpdir):
 def test_test_no_duplicate_requirements_failing(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write(
         'pkg-with-deps\n'
-        'pkg-with-deps\n'
+        'pkg-with-deps\n',
     )
     in_tmpdir.join('requirements-dev-minimal.txt').write(
         'flake8\n'
-        'flake8\n'
+        'flake8\n',
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_no_duplicate_requirements()
@@ -137,7 +137,7 @@ def test_test_top_level_dependencies(in_tmpdir):
     in_tmpdir.join('requirements.txt').write(
         'pkg-dep-1==1.0.0\n'
         'pkg-dep-2==2.0.0\n'
-        'pkg-with-deps==0.1.0\n'
+        'pkg-with-deps==0.1.0\n',
     )
     # Should pass since all are satisfied
     main.test_top_level_dependencies()
@@ -147,7 +147,7 @@ def test_test_top_level_dependencies_with_extras(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write('pkg-with-extras[extra1]')
     in_tmpdir.join('requirements.txt').write(
         'pkg-with-extras==0.1.0\n'
-        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-1==1.0.0\n',
     )
     # Should pass
     main.test_top_level_dependencies()
@@ -155,14 +155,14 @@ def test_test_top_level_dependencies_with_extras(in_tmpdir):
 
 def test_test_top_level_dependencies_with_depends_on_extras(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write(
-        'depends-on-pkg-with-extras'
+        'depends-on-pkg-with-extras',
     )
     in_tmpdir.join('requirements.txt').write(
         'depends-on-pkg-with-extras==3.0.0\n'
         'pkg-with-extras==0.1.0\n'
         'pkg-dep-1==1.0.0\n'
         'pkg-dep-2==2.0.0\n'
-        'prerelease-pkg==1.2.3-rc1\n'
+        'prerelease-pkg==1.2.3-rc1\n',
     )
     # Should pass
     main.test_top_level_dependencies()
@@ -185,7 +185,7 @@ def test_test_top_level_dependencies_not_enough_pinned(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
     in_tmpdir.join('requirements.txt').write(
         'pkg-dep-1==1.0.0\n'
-        'pkg-with-deps==0.1.0\n'
+        'pkg-with-deps==0.1.0\n',
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
@@ -229,7 +229,7 @@ def test_test_top_level_dependencies_no_requirements_dev_minimal(
     in_tmpdir.join('requirements.txt').ensure()
     in_tmpdir.join('requirements-dev.txt').write(
         'pkg-dep-1\n'
-        'pkg-dep-2==2.0.0\n'
+        'pkg-dep-2==2.0.0\n',
     )
     main.test_top_level_dependencies()  # should not raise
     assert (
@@ -246,7 +246,7 @@ def test_test_top_level_dependencies_no_dev_deps_pinned(in_tmpdir):
     in_tmpdir.join('requirements.txt').ensure()
     in_tmpdir.join('requirements-dev-minimal.txt').write(
         'pkg-dep-1\n'
-        'pkg-dep-2\n'
+        'pkg-dep-2\n',
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
@@ -274,7 +274,7 @@ def test_test_top_level_dependencies_some_dev_deps_not_pinned(in_tmpdir):
     in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-with-deps')
     in_tmpdir.join('requirements-dev.txt').write(
         'pkg-with-deps==0.1.0\n'
-        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-1==1.0.0\n',
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
@@ -289,7 +289,7 @@ def test_test_top_level_dependencies_some_dev_deps_not_pinned(in_tmpdir):
     in_tmpdir.join('requirements-dev.txt').write(
         'pkg-with-deps==0.1.0\n'
         'pkg-dep-1==1.0.0\n'
-        'pkg-dep-2==2.0.0\n'
+        'pkg-dep-2==2.0.0\n',
     )
     main.test_top_level_dependencies()
 
@@ -323,7 +323,7 @@ def test_test_top_level_dependencies_prod_dep_is_only_in_dev_deps(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
     in_tmpdir.join('requirements.txt').write(
         'pkg-with-deps==0.1.0\n'
-        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-1==1.0.0\n',
     )
     in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-dep-2')
     in_tmpdir.join('requirements-dev.txt').write('pkg-dep-2==2.0.0')
@@ -342,7 +342,7 @@ def test_test_top_level_dependencies_too_muchh_pinned(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write('pkg-dep-1')
     in_tmpdir.join('requirements.txt').write(
         'pkg-dep-1==1.0.0\n'
-        'other-dep-1==1.0.0\n'
+        'other-dep-1==1.0.0\n',
     )
     with pytest.raises(AssertionError) as excinfo:
         main.test_top_level_dependencies()
@@ -373,7 +373,7 @@ def test_test_requirements_pinned_all_pinned(in_tmpdir):
     in_tmpdir.join('requirements.txt').write(
         'pkg-with-deps==0.1.0\n'
         'pkg-dep-1==1.0.0\n'
-        'pkg-dep-2==1.0.0\n'
+        'pkg-dep-2==1.0.0\n',
     )
     # Should also not raise (all satisfied)
     main.test_requirements_pinned()
@@ -384,7 +384,7 @@ def test_test_requirements_pinned_all_pinned_dev_only(in_tmpdir):
     in_tmpdir.join('requirements-dev.txt').write(
         'pkg-with-deps==0.1.0\n'
         'pkg-dep-1==1.0.0\n'
-        'pkg-dep-2==1.0.0\n'
+        'pkg-dep-2==1.0.0\n',
     )
     # Should also not raise (all satisfied)
     main.test_requirements_pinned()
@@ -423,7 +423,7 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs(in_tmpdir):
     )
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def in_tmpdir(tmpdir):
     with tmpdir.as_cwd():
         yield tmpdir

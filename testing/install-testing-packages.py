@@ -25,7 +25,7 @@ def main():
     subprocess.check_output(
         # We'll manage dependencies manually
         (sys.executable, '-m', 'pip', 'install', '--no-deps') +
-        tuple(os.path.join('testing', pkg) for pkg in ALL_PACKAGES)
+        tuple(os.path.join('testing', pkg) for pkg in ALL_PACKAGES),
     )
 
 

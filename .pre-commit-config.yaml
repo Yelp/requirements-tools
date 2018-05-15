@@ -1,25 +1,20 @@
+repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    sha: v0.7.1
+    rev: v1.2.3
     hooks:
     -   id: trailing-whitespace
-        language_version: python2.7
     -   id: end-of-file-fixer
-        exclude: ^\.activate\.sh$
-        language_version: python2.7
     -   id: autopep8-wrapper
-        language_version: python2.7
     -   id: check-docstring-first
-        language_version: python2.7
     -   id: check-yaml
-        language_version: python2.7
     -   id: debug-statements
-        language_version: python2.7
     -   id: requirements-txt-fixer
-        language_version: python2.7
     -   id: flake8
-        language_version: python2.7
 -   repo: https://github.com/asottile/reorder_python_imports
-    sha: v0.3.1
+    rev: v1.0.1
     hooks:
     -   id: reorder-python-imports
-        language_version: python2.7
+-   repo: https://github.com/asottile/add-trailing-comma
+    rev: v0.6.4
+    hooks:
+    -   id: add-trailing-comma
