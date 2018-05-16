@@ -29,7 +29,7 @@ def parse_requirement(req):
         dumb_parse.project_name + extras + ','.join(
             operator + pkg_resources.safe_version(version)
             for operator, version in dumb_parse.specs
-        )
+        ),
     )
 
 
@@ -92,7 +92,7 @@ def find_unpinned_requirements(requirements):
         for sub_requirement in package_info.requires(requirement.extras):
             if sub_requirement.key not in pinned_versions:
                 unpinned.add(
-                    (sub_requirement.key, requirement, filename)
+                    (sub_requirement.key, requirement, filename),
                 )
 
     return unpinned
@@ -120,7 +120,7 @@ def check_requirements_is_only_for_applications():
             'check-requirements is designed specifically with applications '
             'in mind (and does not properly work for libraries).\n'
             "Either remove check-requirements (if you're a library) or "
-            '`touch requirements.txt`.'
+            '`touch requirements.txt`.',
         )
 
 
@@ -162,7 +162,7 @@ def check_requirements_integrity():
             raise AssertionError(
                 '{} is required in {}, but is not installed'.format(
                     req.key, filename,
-                )
+                ),
             )
         installed_version = to_version(parse_requirement('{}=={}'.format(
             req.key, installed_things[req.key].version,
@@ -177,7 +177,7 @@ def check_requirements_integrity():
                     filename, pkg, depped, pkg, installed,
                 )
                 for filename, pkg, depped, installed in incorrect
-            ))
+            )),
         )
 
 
@@ -203,7 +203,7 @@ def test_no_duplicate_requirements():
             'Requirements appeared more than once in the same file:\n'
             '{}'.format(''.join(
                 '- {} ({})\n'.format(*duplicate) for duplicate in duplicates
-            ))
+            )),
         )
 
 
@@ -217,7 +217,7 @@ def test_requirements_pinned():
         raise AssertionError(
             'Unpinned requirements detected!\n\n{}'.format(
                 format_unpinned_requirements(unpinned_requirements),
-            )
+            ),
         )
 
 
@@ -248,7 +248,7 @@ def get_pinned_versions_from_requirement(requirement):
                     ),
                 )
             expected_pinned.add(
-                '{}=={}'.format(installed.key, installed.version)
+                '{}=={}'.format(installed.key, installed.version),
             )
     return expected_pinned
 
@@ -321,7 +321,7 @@ def test_top_level_dependencies():
             'requirements-dev-minimal.txt listing your minimal dev '
             'dependencies.\n'
             'See https://github.com/Yelp/requirements-tools'
-            '\033[0m'
+            '\033[0m',
         )
 
     for expected_pinned, pin_filename, minimal_filename in environments:
@@ -349,7 +349,7 @@ def test_top_level_dependencies():
                     ),
                     pin=pin_filename,
                     minimal=minimal_filename,
-                )
+                ),
             )
 
         if required_but_not_pinned:
@@ -362,7 +362,7 @@ def test_top_level_dependencies():
                         required_but_not_pinned,
                     ),
                     pin=pin_filename,
-                    minimal=minimal_filename
+                    minimal=minimal_filename,
                 ),
             )
 
@@ -382,7 +382,7 @@ def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
                 raise AssertionError(
                     'Use dashes for package names {}: {}'.format(
                         requirement_file, line,
-                    )
+                    ),
                 )
 
 

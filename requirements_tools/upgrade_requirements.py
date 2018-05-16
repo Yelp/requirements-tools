@@ -84,7 +84,7 @@ def venv_paths(tmp, pip_tool):
         'venv',
         'venv/bin/python',
         'venv/bin/pip',
-        'venv/bin/' + pip_tool
+        'venv/bin/' + pip_tool,
     )
     return tuple(os.path.join(tmp, d) for d in dirnames)
 
@@ -112,7 +112,7 @@ def make_virtualenv(args):
 
         # Latest pip installs python3.5 wheels
         pip_install(
-            (pip,), '--upgrade', 'setuptools', 'pip', args.install_deps
+            (pip,), '--upgrade', 'setuptools', 'pip', args.install_deps,
         )
         pip_install(pip_tool, '-r', 'requirements-minimal.txt')
         pip_install(pip_tool, '-r', 'requirements-dev-minimal.txt')
