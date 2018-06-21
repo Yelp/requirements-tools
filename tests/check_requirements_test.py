@@ -44,7 +44,7 @@ def test_get_raw_requirements_trivial(tmpdir):
     assert main.get_raw_requirements(reqs_filename.strpath) == []
 
 
-def test_get_raw_requirements_some_things(tmpdir):
+def test_get_raw_requirements_allows_editable_dot(tmpdir):
     reqs_file = tmpdir.join('requirements.txt')
     reqs_file.write('-e .\nfoo==1\nbar==2')
     requirements = main.get_raw_requirements(reqs_file.strpath)
@@ -52,6 +52,29 @@ def test_get_raw_requirements_some_things(tmpdir):
         (pkg_resources.Requirement.parse('foo==1'), reqs_file.strpath),
         (pkg_resources.Requirement.parse('bar==2'), reqs_file.strpath),
     ]
+
+
+@pytest.mark.parametrize(
+    'contents',
+    (
+        '-e git+https://github.com/asottile/cfgv',
+        'git+https://github.com/asottile.cfgv',
+        'https://github.com/Yelp/dumb-init/archive/v1.2.1.zip',
+        'path/to/requirement',
+    ),
+)
+def test_get_raw_requirements_disallows_urls(tmpdir, contents):
+    reqs_file = tmpdir.join('requirements.txt')
+    reqs_file.write(contents)
+    with pytest.raises(AssertionError) as excinfo:
+        main.get_raw_requirements(reqs_file.strpath)
+    msg, = excinfo.value.args
+    assert msg.startswith(
+        'Requirements must be <<pkg>> or <<pkg>>==<<version>>\n'
+        ' - git / http / etc. urls may be mutable (unpinnable)\n'
+        ' - transitive dependencies from urls are not traceable\n'
+        " - line of error: {}\n".format(contents),
+    )
 
 
 def test_to_version():
