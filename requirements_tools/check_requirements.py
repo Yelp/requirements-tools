@@ -47,6 +47,9 @@ def get_raw_requirements(filename):
         (parse_requirement(line), filename)
         for line in lines
         if not line.startswith('-e ')
+        # Not just 'http' because that's a valid package name, look for urls
+        and not line.startswith('https://')
+        and not line.startswith('http://')
     ]
 
 
