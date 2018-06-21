@@ -44,9 +44,25 @@ def test_get_raw_requirements_trivial(tmpdir):
     assert main.get_raw_requirements(reqs_filename.strpath) == []
 
 
-def test_get_raw_requirements_some_things(tmpdir):
+def test_get_raw_requirements_ignores_editable_mode(tmpdir):
     reqs_file = tmpdir.join('requirements.txt')
     reqs_file.write('-e .\nfoo==1\nbar==2')
+    requirements = main.get_raw_requirements(reqs_file.strpath)
+    assert requirements == [
+        (pkg_resources.Requirement.parse('foo==1'), reqs_file.strpath),
+        (pkg_resources.Requirement.parse('bar==2'), reqs_file.strpath),
+    ]
+
+
+def test_get_raw_requirements_ignores_urls(tmpdir):
+    reqs_file = tmpdir.join('requirements.txt')
+    req_str = '\n'.join([
+        'http://example.com',
+        'https://github.com',
+        'foo==1',
+        'bar==2',
+    ])
+    reqs_file.write(req_str)
     requirements = main.get_raw_requirements(reqs_file.strpath)
     assert requirements == [
         (pkg_resources.Requirement.parse('foo==1'), reqs_file.strpath),
