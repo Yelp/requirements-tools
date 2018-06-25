@@ -42,12 +42,22 @@ def get_lines_from_file(filename):
 
 
 def get_raw_requirements(filename):
-    lines = get_lines_from_file(filename)
-    return [
-        (parse_requirement(line), filename)
-        for line in lines
-        if not line.startswith('-e ')
-    ]
+    ret = []
+    for line in get_lines_from_file(filename):
+        # allow something to editably install itself
+        if line.strip() == '-e .':
+            continue
+        try:
+            ret.append((parse_requirement(line), filename))
+        except pkg_resources.RequirementParseError as e:
+            raise AssertionError(
+                'Requirements must be <<pkg>> or <<pkg>>==<<version>>\n'
+                ' - git / http / etc. urls may be mutable (unpinnable)\n'
+                ' - transitive dependencies from urls are not traceable\n'
+                ' - line of error: {}\n'
+                ' - inner exception: {!r}\n'.format(line.strip(), e),
+            )
+    return ret
 
 
 def to_version(requirement):
