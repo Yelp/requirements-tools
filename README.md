@@ -137,7 +137,7 @@ To use it, just call `visualize-requirements requirements.txt`.
 
 This tool checks whether all of your dependencies are pre-wheeled on the
 remote pypi server.  This is useful while upgrading requirements to verify
-that you won't waste building things from source during installation.
+that you won't waste time building things from source during installation.
 
 ### Checking against an internal pypi server
 
