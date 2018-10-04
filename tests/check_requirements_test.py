@@ -6,6 +6,16 @@ import pytest
 
 from requirements_tools import check_requirements as main
 
+DEFAULT_REQUIREMENTS_MINIMAL_FILES = frozenset([
+    'requirements-minimal.txt',
+    'requirements-dev-minimal.txt',
+])
+
+DEFAULT_REQUIREMENTS_FILES = frozenset([
+    'requirements.txt',
+    'requirements-dev.txt',
+])
+
 
 @pytest.mark.parametrize(
     ('reqin', 'reqout'),
@@ -133,7 +143,10 @@ def test_format_unpinned_requirements():
 def test_test_no_duplicate_requirements_passing(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write('pkg-with-deps')
     in_tmpdir.join('requirements.txt').write('pkg-with-deps==0.1.0')
-    main.test_no_duplicate_requirements()
+    main.test_no_duplicate_requirements(
+        DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+        DEFAULT_REQUIREMENTS_FILES,
+    )
 
 
 def test_test_no_duplicate_requirements_failing(in_tmpdir):
@@ -146,11 +159,14 @@ def test_test_no_duplicate_requirements_failing(in_tmpdir):
         'flake8\n',
     )
     with pytest.raises(AssertionError) as excinfo:
-        main.test_no_duplicate_requirements()
+        main.test_no_duplicate_requirements(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args == (
         'Requirements appeared more than once in the same file:\n'
-        '- pkg-with-deps (requirements-minimal.txt)\n'
-        '- flake8 (requirements-dev-minimal.txt)\n',
+        '- flake8 (requirements-dev-minimal.txt)\n'
+        '- pkg-with-deps (requirements-minimal.txt)\n',
     )
 
 
@@ -163,7 +179,24 @@ def test_test_top_level_dependencies(in_tmpdir):
         'pkg-with-deps==0.1.0\n',
     )
     # Should pass since all are satisfied
-    main.test_top_level_dependencies()
+    main.test_top_level_dependencies(
+        DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+        DEFAULT_REQUIREMENTS_FILES,
+    )
+
+
+def test_test_top_level_dependencies_dev_only(in_tmpdir):
+    in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-with-deps')
+    in_tmpdir.join('requirements-dev.txt').write(
+        'pkg-dep-1==1.0.0\n'
+        'pkg-dep-2==2.0.0\n'
+        'pkg-with-deps==0.1.0\n',
+    )
+    # Should pass since all are satisfied
+    main.test_top_level_dependencies(
+        frozenset(['requirements-dev-minimal.txt']),
+        frozenset(['requirements-dev.txt']),
+    )
 
 
 def test_test_top_level_dependencies_with_extras(in_tmpdir):
@@ -173,7 +206,10 @@ def test_test_top_level_dependencies_with_extras(in_tmpdir):
         'pkg-dep-1==1.0.0\n',
     )
     # Should pass
-    main.test_top_level_dependencies()
+    main.test_top_level_dependencies(
+        DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+        DEFAULT_REQUIREMENTS_FILES,
+    )
 
 
 def test_test_top_level_dependencies_with_depends_on_extras(in_tmpdir):
@@ -188,14 +224,20 @@ def test_test_top_level_dependencies_with_depends_on_extras(in_tmpdir):
         'prerelease-pkg==1.2.3-rc1\n',
     )
     # Should pass
-    main.test_top_level_dependencies()
+    main.test_top_level_dependencies(
+        DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+        DEFAULT_REQUIREMENTS_FILES,
+    )
 
 
 def test_test_top_level_dependencies_minimal_req_not_installed(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write('not-installed-pkg')
     in_tmpdir.join('requirements.txt').ensure()
     with pytest.raises(AssertionError) as excinfo:
-        main.test_top_level_dependencies()
+        main.test_top_level_dependencies(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args == (
         'A dependency listed in requirements-minimal.txt is not installed.\n'
         'Is it missing from requirements.txt?\n'
@@ -211,7 +253,10 @@ def test_test_top_level_dependencies_not_enough_pinned(in_tmpdir):
         'pkg-with-deps==0.1.0\n',
     )
     with pytest.raises(AssertionError) as excinfo:
-        main.test_top_level_dependencies()
+        main.test_top_level_dependencies(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args == (
         'Dependencies derived from requirements-minimal.txt are not pinned in '
         'requirements.txt\n'
@@ -224,7 +269,10 @@ def test_test_top_level_dependencies_unmet_dependency(in_tmpdir):
     in_tmpdir.join('requirements-minimal.txt').write('pkg-unmet-deps')
     in_tmpdir.join('requirements.txt').write('pkg-unmet-deps==1.0')
     with pytest.raises(AssertionError) as excinfo:
-        main.test_top_level_dependencies()
+        main.test_top_level_dependencies(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args == (
         'Unmet dependency detected!\n'
         'Somehow `missing-dependency` is not installed!\n'
@@ -239,7 +287,10 @@ def test_prerelease_name_normalization(in_tmpdir, version):
     in_tmpdir.join('requirements.txt').write(
         'prerelease-pkg=={}'.format(version),
     )
-    main.test_top_level_dependencies()
+    main.test_top_level_dependencies(
+        DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+        DEFAULT_REQUIREMENTS_FILES,
+    )
 
 
 def test_test_top_level_dependencies_no_requirements_dev_minimal(
@@ -254,7 +305,10 @@ def test_test_top_level_dependencies_no_requirements_dev_minimal(
         'pkg-dep-1\n'
         'pkg-dep-2==2.0.0\n',
     )
-    main.test_top_level_dependencies()  # should not raise
+    main.test_top_level_dependencies(
+        DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+        DEFAULT_REQUIREMENTS_FILES,
+    )  # should not raise
     assert (
         'Warning: check-requirements is *not* checking your dev dependencies.'
         in capsys.readouterr()[0]
@@ -272,7 +326,10 @@ def test_test_top_level_dependencies_no_dev_deps_pinned(in_tmpdir):
         'pkg-dep-2\n',
     )
     with pytest.raises(AssertionError) as excinfo:
-        main.test_top_level_dependencies()
+        main.test_top_level_dependencies(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args == (
         'Dependencies derived from requirements-dev-minimal.txt are '
         'not pinned in requirements-dev.txt\n'
@@ -285,7 +342,10 @@ def test_test_top_level_dependencies_no_dev_deps_pinned(in_tmpdir):
     in_tmpdir.join('requirements-dev.txt').write(
         'pkg-dep-1==1.0.0\npkg-dep-2==2.0.0\n',
     )
-    main.test_top_level_dependencies()
+    main.test_top_level_dependencies(
+        DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+        DEFAULT_REQUIREMENTS_FILES,
+    )
 
 
 def test_test_top_level_dependencies_some_dev_deps_not_pinned(in_tmpdir):
@@ -300,7 +360,10 @@ def test_test_top_level_dependencies_some_dev_deps_not_pinned(in_tmpdir):
         'pkg-dep-1==1.0.0\n',
     )
     with pytest.raises(AssertionError) as excinfo:
-        main.test_top_level_dependencies()
+        main.test_top_level_dependencies(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args == (
         'Dependencies derived from requirements-dev-minimal.txt are '
         'not pinned in requirements-dev.txt\n'
@@ -314,7 +377,10 @@ def test_test_top_level_dependencies_some_dev_deps_not_pinned(in_tmpdir):
         'pkg-dep-1==1.0.0\n'
         'pkg-dep-2==2.0.0\n',
     )
-    main.test_top_level_dependencies()
+    main.test_top_level_dependencies(
+        DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+        DEFAULT_REQUIREMENTS_FILES,
+    )
 
 
 def test_test_top_level_dependencies_overlapping_prod_dev_deps(in_tmpdir):
@@ -326,7 +392,10 @@ def test_test_top_level_dependencies_overlapping_prod_dev_deps(in_tmpdir):
     in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-dep-1')
     in_tmpdir.join('requirements-dev.txt').write('pkg-dep-1==1.0.0')
     with pytest.raises(AssertionError) as excinfo:
-        main.test_top_level_dependencies()
+        main.test_top_level_dependencies(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     # TODO: this exception is misleading, ideally it should tell you that
     # you don't need to pin it in reqs-dev.txt if it's also a prod dep
     assert excinfo.value.args == (
@@ -351,7 +420,10 @@ def test_test_top_level_dependencies_prod_dep_is_only_in_dev_deps(in_tmpdir):
     in_tmpdir.join('requirements-dev-minimal.txt').write('pkg-dep-2')
     in_tmpdir.join('requirements-dev.txt').write('pkg-dep-2==2.0.0')
     with pytest.raises(AssertionError) as excinfo:
-        main.test_top_level_dependencies()
+        main.test_top_level_dependencies(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args == (
         'Dependencies derived from requirements-minimal.txt are not '
         'pinned in requirements.txt\n'
@@ -368,7 +440,10 @@ def test_test_top_level_dependencies_too_muchh_pinned(in_tmpdir):
         'other-dep-1==1.0.0\n',
     )
     with pytest.raises(AssertionError) as excinfo:
-        main.test_top_level_dependencies()
+        main.test_top_level_dependencies(
+            DEFAULT_REQUIREMENTS_MINIMAL_FILES,
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args[0] == (
         'Requirements are pinned in requirements.txt but are not depended on in requirements-minimal.txt!\n'  # noqa
         '\n'
@@ -382,14 +457,14 @@ def test_test_top_level_dependencies_too_muchh_pinned(in_tmpdir):
 def test_test_requirements_pinned_trivial(in_tmpdir):
     in_tmpdir.join('requirements.txt').ensure()
     # Should not raise
-    main.test_requirements_pinned()
+    main.test_requirements_pinned(DEFAULT_REQUIREMENTS_FILES)
 
 
 def test_test_requirements_pinned_trivial_with_dev_too(in_tmpdir):
     in_tmpdir.join('requirements.txt').ensure()
     in_tmpdir.join('requirements-dev.txt').ensure()
     # Should not raise
-    main.test_requirements_pinned()
+    main.test_requirements_pinned(DEFAULT_REQUIREMENTS_FILES)
 
 
 def test_test_requirements_pinned_all_pinned(in_tmpdir):
@@ -399,7 +474,7 @@ def test_test_requirements_pinned_all_pinned(in_tmpdir):
         'pkg-dep-2==1.0.0\n',
     )
     # Should also not raise (all satisfied)
-    main.test_requirements_pinned()
+    main.test_requirements_pinned(DEFAULT_REQUIREMENTS_FILES)
 
 
 def test_test_requirements_pinned_all_pinned_dev_only(in_tmpdir):
@@ -410,14 +485,14 @@ def test_test_requirements_pinned_all_pinned_dev_only(in_tmpdir):
         'pkg-dep-2==1.0.0\n',
     )
     # Should also not raise (all satisfied)
-    main.test_requirements_pinned()
+    main.test_requirements_pinned(DEFAULT_REQUIREMENTS_FILES)
 
 
 def test_test_requirements_pinned_missing_some(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('pkg-with-deps==0.1.0')
     in_tmpdir.join('requirements-dev.txt').write('other-pkg-with-deps==0.2.0')
     with pytest.raises(AssertionError) as excinfo:
-        main.test_requirements_pinned()
+        main.test_requirements_pinned(DEFAULT_REQUIREMENTS_FILES)
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
         '\tpkg-dep-1 (required by pkg-with-deps==0.1.0 in requirements.txt)\n'
@@ -434,7 +509,7 @@ def test_test_requirements_pinned_missing_some_with_dev_reqs(in_tmpdir):
         'other-pkg-with-deps',
     )
     with pytest.raises(AssertionError) as excinfo:
-        main.test_requirements_pinned()
+        main.test_requirements_pinned(DEFAULT_REQUIREMENTS_FILES)
     assert excinfo.value.args == (
         'Unpinned requirements detected!\n\n'
         '\tother-dep-1 (required by other-pkg-with-deps==0.2.0 in requirements-dev.txt)\n'  # noqa
@@ -503,7 +578,7 @@ def test_test_no_underscores_passes_reqs_dev_doesnt_exist(in_tmpdir):
     """If requirements.txt exists (but not -dev.txt) we shouldn't raise."""
     in_tmpdir.join('requirements.txt').write('foo==1')
     # Should not raise
-    main.test_no_underscores_all_dashes()
+    main.test_no_underscores_all_dashes(DEFAULT_REQUIREMENTS_FILES)
 
 
 def test_test_no_underscores_all_dashes_ok(in_tmpdir):
@@ -527,33 +602,44 @@ def test_test_no_underscores_all_dashes_error(in_tmpdir):
 
 def test_check_requirements_is_only_for_applications(in_tmpdir):
     in_tmpdir.join('requirements.txt').ensure()
-    main.check_requirements_is_only_for_applications()
+    main.check_requirements_is_only_for_applications(
+        DEFAULT_REQUIREMENTS_FILES,
+    )
 
 
 def test_check_requirements_is_only_for_applications_failing():
     with pytest.raises(AssertionError) as excinfo:
-        main.check_requirements_is_only_for_applications()
+        main.check_requirements_is_only_for_applications(
+            DEFAULT_REQUIREMENTS_FILES,
+        )
     assert excinfo.value.args == (
-        'check-requirements is designed specifically with applications in '
-        'mind (and does not properly work for libraries).\n'
-        "Either remove check-requirements (if you're a library) or "
-        '`touch requirements.txt`.',
+        'check-requirements is designed specifically with applications '
+        'in mind (and does not properly work for libraries).\n'
+        'Consider using the --dev-only flag if checking dev '
+        'requirements for a library.',
+    )
+
+
+def test_check_requirements_is_only_for_applications_dev_only(in_tmpdir):
+    in_tmpdir.join('requirements-dev.txt').ensure()
+    main.check_requirements_is_only_for_applications(
+        frozenset('requirements-dev.txt'),
     )
 
 
 def test_check_requirements_integrity_passing(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('pkg-with-deps==0.1.0')
-    main.check_requirements_integrity()
+    main.check_requirements_integrity(DEFAULT_REQUIREMENTS_FILES)
 
 
 def test_check_requirements_integrity_doesnt_care_about_unpinned(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('pkg-with-deps')
-    main.check_requirements_integrity()
+    main.check_requirements_integrity(DEFAULT_REQUIREMENTS_FILES)
 
 
 def test_check_integrity_no_files(in_tmpdir):
     with pytest.raises(AssertionError) as excinfo:
-        main.check_requirements_integrity()
+        main.check_requirements_integrity(DEFAULT_REQUIREMENTS_FILES)
     assert excinfo.value.args == (
         'check-requirements expects at least requirements-minimal.txt '
         'and requirements.txt',
@@ -563,7 +649,7 @@ def test_check_integrity_no_files(in_tmpdir):
 def test_check_requirements_integrity_failing(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('pkg-with-deps==1.0.0')
     with pytest.raises(AssertionError) as excinfo:
-        main.check_requirements_integrity()
+        main.check_requirements_integrity(DEFAULT_REQUIREMENTS_FILES)
     assert excinfo.value.args == (
         'Installed requirements do not match requirement files!\n'
         'Rebuild your virtualenv:\n'
@@ -575,13 +661,13 @@ def test_check_requirements_integrity_failing(in_tmpdir):
 @pytest.mark.parametrize('version', ('2.13-1', '2.13.post1'))
 def test_check_requirements_integrity_post_version(in_tmpdir, version):
     in_tmpdir.join('requirements.txt').write('chameleon=={}'.format(version))
-    main.check_requirements_integrity()
+    main.check_requirements_integrity(DEFAULT_REQUIREMENTS_FILES)
 
 
 def test_check_requirements_integrity_package_not_installed(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('not-installed==1.0.0')
     with pytest.raises(AssertionError) as excinfo:
-        main.check_requirements_integrity()
+        main.check_requirements_integrity(DEFAULT_REQUIREMENTS_FILES)
     assert excinfo.value.args == (
         'not-installed is required in requirements.txt, but is not installed',
     )
