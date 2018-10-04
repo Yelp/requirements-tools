@@ -11,12 +11,10 @@ from operator import attrgetter
 import pkg_resources
 import pytest
 
-
 installed_things = {
     pkg.key: pkg
     for pkg in pkg_resources.working_set
 }
-REQUIREMENTS_FILES = frozenset(('requirements.txt', 'requirements-dev.txt'))
 
 
 def parse_requirement(req):
@@ -124,17 +122,18 @@ def format_unpinned_requirements(unpinned_requirements):
 
 
 @pytest.fixture(autouse=True, scope='session')
-def check_requirements_is_only_for_applications():
-    if not os.path.exists('requirements.txt'):
+def check_requirements_is_only_for_applications(requirements_files):
+    if ('requirements.txt' in requirements_files and
+            not os.path.exists('requirements.txt')):
         raise AssertionError(
             'check-requirements is designed specifically with applications '
             'in mind (and does not properly work for libraries).\n'
-            "Either remove check-requirements (if you're a library) or "
-            '`touch requirements.txt`.',
+            'Consider using the --dev-only flag if checking dev '
+            'requirements for a library.',
         )
 
 
-def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
+def _get_all_raw_requirements(requirements_files):
     # for compatibility with repos that haven't started using
     # requirements-dev-minimal.txt, we don't want to force pinning
     # requirements-dev.txt until they use minimal
@@ -155,8 +154,8 @@ def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
 
 
 @pytest.fixture(autouse=True, scope='session')
-def check_requirements_integrity():
-    raw_requirements = _get_all_raw_requirements()
+def check_requirements_integrity(requirements_files):
+    raw_requirements = _get_all_raw_requirements(requirements_files)
     if not raw_requirements:
         raise AssertionError(
             'check-requirements expects at least requirements-minimal.txt '
@@ -191,14 +190,12 @@ def check_requirements_integrity():
         )
 
 
-def test_no_duplicate_requirements():
+def test_no_duplicate_requirements(
+    requirements_minimal_files,
+    requirements_files,
+):
     duplicates = []
-    for filename in (
-        'requirements-minimal.txt',
-        'requirements.txt',
-        'requirements-dev-minimal.txt',
-        'requirements-dev.txt',
-    ):
+    for filename in requirements_minimal_files | requirements_files:
         if not os.path.exists(filename):
             continue
         found = set()
@@ -212,13 +209,14 @@ def test_no_duplicate_requirements():
         raise AssertionError(
             'Requirements appeared more than once in the same file:\n'
             '{}'.format(''.join(
-                '- {} ({})\n'.format(*duplicate) for duplicate in duplicates
+                '- {} ({})\n'.format(*duplicate)
+                for duplicate in sorted(duplicates)
             )),
         )
 
 
-def test_requirements_pinned():
-    raw_requirements = _get_all_raw_requirements()
+def test_requirements_pinned(requirements_files):
+    raw_requirements = _get_all_raw_requirements(requirements_files)
     if raw_requirements is None:  # pragma: no cover
         pytest.skip('No requirements files found')
 
@@ -284,30 +282,36 @@ def _expected_pinned(filename, pin_filename):
     return ret
 
 
-def test_top_level_dependencies():
+def test_top_level_dependencies(
+    requirements_minimal_files,
+    requirements_files,
+):
     """Test that top-level requirements (reqs-minimal and reqs-dev-minimal)
     are consistent with the pinned requirements.
     """
     if all(
-            not os.path.exists(path) for path in (
-                'requirements-minimal.txt',
-                'requirements.txt',
-                'requirements-dev-minimal.txt',
-                'requirements-dev.txt',
-            )
+            not os.path.exists(path)
+            for path in requirements_minimal_files | requirements_files
     ):  # pragma: no cover
         pytest.skip('No requirements files')
 
-    expected_pinned_prod = _expected_pinned(
-        'requirements-minimal.txt', 'requirements.txt',
-    )
-    environments = [
-        (
-            expected_pinned_prod,
-            'requirements.txt',
-            'requirements-minimal.txt',
-        ),
-    ]
+    expected_pinned_prod = set()
+    environments = []
+
+    if (
+        'requirements-minimal.txt' in requirements_minimal_files and
+        'requirements.txt' in requirements_files
+    ):
+        expected_pinned_prod = _expected_pinned(
+            'requirements-minimal.txt', 'requirements.txt',
+        )
+        environments.append(
+            (
+                expected_pinned_prod,
+                'requirements.txt',
+                'requirements-minimal.txt',
+            ),
+        )
 
     if os.path.exists('requirements-dev-minimal.txt'):
         expected_pinned_dev = _expected_pinned(
@@ -377,7 +381,7 @@ def test_top_level_dependencies():
             )
 
 
-def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
+def test_no_underscores_all_dashes(requirements_files):
     if all(
             not os.path.exists(reqfile)
             for reqfile in requirements_files
@@ -403,11 +407,43 @@ def bold(text):  # pragma: no cover
         return text
 
 
+class RequirementsFilesParametrizer(object):  # pragma: no cover
+    def pytest_addoption(self, parser):
+        parser.addoption('--dev-only', action='store_true', default=False)
+
+    def pytest_generate_tests(self, metafunc):
+        requirements_minimal_files = []
+        requirements_files = []
+
+        if not metafunc.config.getoption('--dev-only'):
+            requirements_minimal_files.append('requirements-minimal.txt')
+            requirements_files.append('requirements.txt')
+
+        requirements_minimal_files.append('requirements-dev-minimal.txt')
+        requirements_files.append('requirements-dev.txt')
+
+        if 'requirements_minimal_files' in metafunc.fixturenames:
+            metafunc.parametrize(
+                'requirements_minimal_files',
+                [frozenset(requirements_minimal_files)],
+                scope='session',
+            )
+        if 'requirements_files' in metafunc.fixturenames:
+            metafunc.parametrize(
+                'requirements_files',
+                [frozenset(requirements_files)],
+                scope='session',
+            )
+
+
 def main():  # pragma: no cover
     print('Checking requirements...')
     # Forces quiet output and overrides pytest.ini
     os.environ['PYTEST_ADDOPTS'] = '-q -s --tb=short'
-    return pytest.main([__file__.replace('pyc', 'py')] + sys.argv[1:])
+    return pytest.main(
+        [__file__.replace('pyc', 'py')] + sys.argv[1:],
+        plugins=[RequirementsFilesParametrizer()],
+    )
 
 
 if __name__ == '__main__':

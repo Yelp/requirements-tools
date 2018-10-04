@@ -38,6 +38,8 @@ def print_call(*cmd, **kwargs):
 
 
 def reexec(*cmd, **kwargs):
+    if kwargs.pop('dev_only'):
+        cmd = cmd + ('--dev-only',)
     reason = kwargs.pop('reason')
     assert not kwargs, kwargs
     print(color('*** exec-ing: {}'.format(reason), '\033[33m'))
@@ -114,7 +116,8 @@ def make_virtualenv(args):
         pip_install(
             (pip,), '--upgrade', 'setuptools', 'pip', args.install_deps,
         )
-        pip_install(pip_tool, '-r', 'requirements-minimal.txt')
+        if not args.dev_only:
+            pip_install(pip_tool, '-r', 'requirements-minimal.txt')
         pip_install(pip_tool, '-r', 'requirements-dev-minimal.txt')
 
         reexec(
@@ -126,6 +129,7 @@ def make_virtualenv(args):
             '--exec-limit', str(args.exec_limit),
             '--pip-tool', args.pip_tool,
             '--install-deps', args.install_deps,
+            dev_only=args.dev_only,
             reason='to use the virtualenv python',
         )
 
@@ -148,9 +152,11 @@ def main():
     parser.add_argument('--tempdir', help=argparse.SUPPRESS)
     parser.add_argument('--pip-tool', default='pip')
     parser.add_argument('--install-deps', default='pip')
+    parser.add_argument('--dev-only', action='store_true', default=False)
     args = parser.parse_args()
 
-    assert os.path.exists('requirements-minimal.txt')
+    if not args.dev_only:
+        assert os.path.exists('requirements-minimal.txt')
     assert os.path.exists('requirements-dev-minimal.txt')
 
     if args.tempdir is None:
@@ -161,7 +167,10 @@ def main():
 
     with cleanup_dir(args.tempdir):
         try:
-            reqs = installed('requirements-minimal.txt')
+            if not args.dev_only:
+                reqs = installed('requirements-minimal.txt')
+            else:
+                reqs = set()
             reqs_dev = installed('requirements-dev-minimal.txt')
         except NeedsMoreInstalledError as e:
             print(color('Installing unmet requirements!', '\033[31m'))
@@ -180,11 +189,13 @@ def main():
                 '--index-url', args.index_url,
                 '--tempdir', args.tempdir,
                 '--exec-limit', str(args.exec_limit),
+                dev_only=args.dev_only,
                 reason='Unmet dependencies',
             )
 
-        with open('requirements.txt', 'w') as f:
-            f.write('\n'.join(reqs) + '\n')
+        if not args.dev_only:
+            with open('requirements.txt', 'w') as f:
+                f.write('\n'.join(reqs) + '\n')
         with open('requirements-dev.txt', 'w') as f:
             f.write('\n'.join(reqs_dev - reqs) + '\n')
 
@@ -193,9 +204,14 @@ def main():
                 pip_tool + ('install', 'pre-commit-hooks'),
                 stdout=devnull, stderr=devnull,
             )
+        if not args.dev_only:
+            subprocess.call((
+                os.path.join(venv, 'bin', 'requirements-txt-fixer'),
+                'requirements.txt',
+            ))
         subprocess.call((
             os.path.join(venv, 'bin', 'requirements-txt-fixer'),
-            'requirements.txt', 'requirements-dev.txt',
+            'requirements-dev.txt',
         ))
 
 
