@@ -527,12 +527,12 @@ def test_test_no_underscores_all_dashes_error(in_tmpdir):
 
 def test_check_requirements_is_only_for_applications(in_tmpdir):
     in_tmpdir.join('requirements.txt').ensure()
-    main.check_requirements_is_only_for_applications()
+    main._check_requirements_is_only_for_applications_impl()
 
 
 def test_check_requirements_is_only_for_applications_failing():
     with pytest.raises(AssertionError) as excinfo:
-        main.check_requirements_is_only_for_applications()
+        main._check_requirements_is_only_for_applications_impl()
     assert excinfo.value.args == (
         'check-requirements is designed specifically with applications in '
         'mind (and does not properly work for libraries).\n'
@@ -543,17 +543,17 @@ def test_check_requirements_is_only_for_applications_failing():
 
 def test_check_requirements_integrity_passing(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('pkg-with-deps==0.1.0')
-    main.check_requirements_integrity()
+    main._check_requirements_integrity_impl()
 
 
 def test_check_requirements_integrity_doesnt_care_about_unpinned(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('pkg-with-deps')
-    main.check_requirements_integrity()
+    main._check_requirements_integrity_impl()
 
 
 def test_check_integrity_no_files(in_tmpdir):
     with pytest.raises(AssertionError) as excinfo:
-        main.check_requirements_integrity()
+        main._check_requirements_integrity_impl()
     assert excinfo.value.args == (
         'check-requirements expects at least requirements-minimal.txt '
         'and requirements.txt',
@@ -563,7 +563,7 @@ def test_check_integrity_no_files(in_tmpdir):
 def test_check_requirements_integrity_failing(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('pkg-with-deps==1.0.0')
     with pytest.raises(AssertionError) as excinfo:
-        main.check_requirements_integrity()
+        main._check_requirements_integrity_impl()
     assert excinfo.value.args == (
         'Installed requirements do not match requirement files!\n'
         'Rebuild your virtualenv:\n'
@@ -575,13 +575,13 @@ def test_check_requirements_integrity_failing(in_tmpdir):
 @pytest.mark.parametrize('version', ('2.13-1', '2.13.post1'))
 def test_check_requirements_integrity_post_version(in_tmpdir, version):
     in_tmpdir.join('requirements.txt').write('chameleon=={}'.format(version))
-    main.check_requirements_integrity()
+    main._check_requirements_integrity_impl()
 
 
 def test_check_requirements_integrity_package_not_installed(in_tmpdir):
     in_tmpdir.join('requirements.txt').write('not-installed==1.0.0')
     with pytest.raises(AssertionError) as excinfo:
-        main.check_requirements_integrity()
+        main._check_requirements_integrity_impl()
     assert excinfo.value.args == (
         'not-installed is required in requirements.txt, but is not installed',
     )

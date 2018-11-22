@@ -123,8 +123,7 @@ def format_unpinned_requirements(unpinned_requirements):
     )
 
 
-@pytest.fixture(autouse=True, scope='session')
-def check_requirements_is_only_for_applications():
+def _check_requirements_is_only_for_applications_impl():
     if not os.path.exists('requirements.txt'):
         raise AssertionError(
             'check-requirements is designed specifically with applications '
@@ -132,6 +131,12 @@ def check_requirements_is_only_for_applications():
             "Either remove check-requirements (if you're a library) or "
             '`touch requirements.txt`.',
         )
+
+
+@pytest.fixture(autouse=True, scope='session')
+def check_requirements_is_only_for_applications():  # pragma: no cover
+    """separated as fixtures are not callable in pytest 4+"""
+    _check_requirements_is_only_for_applications_impl()
 
 
 def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
@@ -154,8 +159,7 @@ def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
     ]))
 
 
-@pytest.fixture(autouse=True, scope='session')
-def check_requirements_integrity():
+def _check_requirements_integrity_impl():
     raw_requirements = _get_all_raw_requirements()
     if not raw_requirements:
         raise AssertionError(
@@ -189,6 +193,12 @@ def check_requirements_integrity():
                 for filename, pkg, depped, installed in incorrect
             )),
         )
+
+
+@pytest.fixture(autouse=True, scope='session')
+def check_requirements_integrity():  # pragma: no cover
+    """separated as fixtures are not callable in pytest 4+"""
+    _check_requirements_integrity_impl()
 
 
 def test_no_duplicate_requirements():
