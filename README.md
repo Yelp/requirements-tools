@@ -75,6 +75,12 @@ The recommended layout for your application is:
 
 All of these files should be checked into your application.
 
+The following diagram explains the above concept. As you can see in the diagram, `package-two`, which is a production dependency, and `package-three`, which is a dev dependency, depend on `package-eight`. But `package-eight` will only be listed in `requirements.txt`.
+
+![A package dependency diagram is shown. The dependency graph is as follows: 1. The top level application has two production dependencies, package-one and package-two, and two dev dependencies, package-three and package-four. 2. package-one in turn depends on package-five and package-six. 3. package-two depends on package-seven and package-eight. 4. package-three also depends on package-eight. 5. package-four only depends on package-nine.](https://docs.google.com/drawings/d/e/2PACX-1vTezwHVxvTdsL0Ta5ruvXFYBYw3XYlvcENlSOUe7wehLwb8yz-q4QKc5TZAm2FtYm0e92NrlgnSJLDL/pub?w=960&h=720)
+
+_The above diagram can be edited on [Google Drawings](https://docs.google.com/drawings/d/1FewA-gmh7vjuatHQlM_u7N56riyLfoH12huVOU0v1MA/edit)._
+
 
 ## check-requirements
 
