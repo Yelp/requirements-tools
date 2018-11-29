@@ -525,6 +525,13 @@ def test_test_no_underscores_all_dashes_error(in_tmpdir):
     )
 
 
+def test_test_no_underscores_all_dashes_ignores_env_markers(in_tmpdir):
+    tmpfile = in_tmpdir.join('tmp')
+    tmpfile.write('foo==1;python_version>2.5 and python_version<=2.7')
+    # Should not raise
+    main.test_no_underscores_all_dashes(requirements_files=(tmpfile.strpath,))
+
+
 def test_check_requirements_is_only_for_applications(in_tmpdir):
     in_tmpdir.join('requirements.txt').ensure()
     main._check_requirements_is_only_for_applications_impl()
