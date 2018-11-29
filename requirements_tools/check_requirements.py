@@ -398,7 +398,7 @@ def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
         if not os.path.exists(requirement_file):
             continue
         for line in get_lines_from_file(requirement_file):
-            if '_' in line:
+            if '_' in line.split(';')[0]:
                 raise AssertionError(
                     'Use dashes for package names {}: {}'.format(
                         requirement_file, line,
