@@ -105,6 +105,7 @@ def make_virtualenv(args):
         print_call(
             sys.executable, '-m', 'virtualenv', venv,
             '-p', args.python, '--never-download',
+            '--no-wheel', '--no-setuptools',
         )
 
         def pip_install(pip, *argv):
@@ -112,7 +113,8 @@ def make_virtualenv(args):
 
         # Latest pip installs python3.5 wheels
         pip_install(
-            (pip,), '--upgrade', 'setuptools', 'pip', args.install_deps,
+            (pip,), '--upgrade', 'setuptools', 'pip', 'wheel',
+            args.install_deps,
         )
         pip_install(pip_tool, '-r', 'requirements-minimal.txt')
         pip_install(pip_tool, '-r', 'requirements-dev-minimal.txt')
