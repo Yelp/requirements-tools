@@ -75,6 +75,15 @@ The recommended layout for your application is:
 
 All of these files should be checked into your application.
 
+The following diagram illustrates an example dependency tree. The following points can be inferred from the diagram:
+
+![A package dependency diagram is shown. The dependency graph is as follows: 1. The top level application has two production dependencies, package-one and package-two, and two dev dependencies, package-three and package-four. 2. package-one in turn depends on package-five and package-six. 3. package-two depends on package-seven and package-eight. 4. package-three also depends on package-eight. 5. package-four only depends on package-nine.](img/example-dependency-tree.svg)
+
+* `package-two` is a production dependency
+* `package-three` is a dev dependency
+* Both `package-two` and `package-three` depend on `package-eight`
+* But `package-eight` will only be listed in `requirements.txt`
+
 
 ## check-requirements
 
