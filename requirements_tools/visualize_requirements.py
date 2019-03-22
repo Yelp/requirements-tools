@@ -48,14 +48,16 @@ def print_req(req, depth, seen=()):
     else:
         unmet = ''
 
-    print('{} {}{}{}{}{}'.format(
-        '  ' * depth + bool(depth) * ' -',
-        req.key,
-        '[{}]'.format(','.join(req.extras)) if req.extras else '',
-        ','.join(''.join(spec) for spec in req.specs),
-        circular,
-        unmet,
-    ))
+    print(
+        '{} {}{}{}{}{}'.format(
+            '  ' * depth + bool(depth) * ' -',
+            req.key,
+            '[{}]'.format(','.join(req.extras)) if req.extras else '',
+            ','.join(''.join(spec) for spec in req.specs),
+            circular,
+            unmet,
+        ),
+    )
 
     if circular or unmet:
         return
