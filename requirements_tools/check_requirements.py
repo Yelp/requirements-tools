@@ -152,11 +152,13 @@ def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
     ):  # pragma: no cover
         return
 
-    return list(itertools.chain.from_iterable([
-        get_raw_requirements(reqfile)
-        for reqfile in requirements_files
-        if os.path.exists(reqfile)
-    ]))
+    return list(
+        itertools.chain.from_iterable([
+            get_raw_requirements(reqfile)
+            for reqfile in requirements_files
+            if os.path.exists(reqfile)
+        ]),
+    )
 
 
 def _check_requirements_integrity_impl():
@@ -178,20 +180,24 @@ def _check_requirements_integrity_impl():
                     req.key, filename,
                 ),
             )
-        installed_version = to_version(parse_requirement('{}=={}'.format(
-            req.key, installed_things[req.key].version,
-        )))
+        installed_version = to_version(
+            parse_requirement(
+                '{}=={}'.format(req.key, installed_things[req.key].version),
+            ),
+        )
         if installed_version != version:
             incorrect.append((filename, req.key, version, installed_version))
     if incorrect:
         raise AssertionError(
             'Installed requirements do not match requirement files!\n'
-            'Rebuild your virtualenv:\n{}'.format(''.join(
-                ' - ({}) {}=={} (installed) {}=={}\n'.format(
-                    filename, pkg, depped, pkg, installed,
-                )
-                for filename, pkg, depped, installed in incorrect
-            )),
+            'Rebuild your virtualenv:\n{}'.format(
+                ''.join(
+                    ' - ({}) {}=={} (installed) {}=={}\n'.format(
+                        filename, pkg, depped, pkg, installed,
+                    )
+                    for filename, pkg, depped, installed in incorrect
+                ),
+            ),
         )
 
 
@@ -221,9 +227,12 @@ def test_no_duplicate_requirements():
     if duplicates:
         raise AssertionError(
             'Requirements appeared more than once in the same file:\n'
-            '{}'.format(''.join(
-                '- {} ({})\n'.format(*duplicate) for duplicate in duplicates
-            )),
+            '{}'.format(
+                ''.join(
+                    '- {} ({})\n'.format(*duplicate)
+                    for duplicate in duplicates
+                ),
+            ),
         )
 
 

@@ -62,9 +62,9 @@ def installed(requirements_file):
     while requirements_to_parse:
         req = requirements_to_parse.pop()
         installed_req = installed_things[req.key]
-        expected_pinned.add('{}=={}'.format(
-            installed_req.project_name, installed_req.version,
-        ))
+        expected_pinned.add(
+            '{}=={}'.format(installed_req.project_name, installed_req.version),
+        )
         for sub in installed_req.requires(req.extras):
             if sub.key not in installed_things:
                 specifiers = ','.join(str(s) for s in sub.specifier)
