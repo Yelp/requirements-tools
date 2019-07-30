@@ -18,6 +18,13 @@ installed_things = {
 }
 REQUIREMENTS_FILES = frozenset(('requirements.txt', 'requirements-dev.txt'))
 
+try:
+    IGNORE_UNPINNED = set(
+        os.getenv('CHECK_REQUIREMENTS_IGNORE_UNPINNED', '').split(','),
+    )
+except Exception:
+    IGNORE_UNPINNED = set()
+
 
 def parse_requirement(req):
     dumb_parse = pkg_resources.Requirement.parse(req)
@@ -104,6 +111,12 @@ def find_unpinned_requirements(requirements):
                 unpinned.add(
                     (sub_requirement.key, requirement, filename),
                 )
+
+    unpinned = {
+        req
+        for req in unpinned
+        if req[0] not in IGNORE_UNPINNED
+    }
 
     return unpinned
 
@@ -381,6 +394,11 @@ def test_top_level_dependencies():
                 ),
             )
 
+        required_but_not_pinned = {
+            req
+            for req in required_but_not_pinned
+            if req.project_name not in IGNORE_UNPINNED
+        }
         if required_but_not_pinned:
             raise AssertionError(
                 'Dependencies derived from {minimal} are not pinned in '
