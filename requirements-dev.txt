@@ -2,7 +2,6 @@
 # Triggers WEBCORE-3776
 chameleon==2.13.post1
 coverage
-flake8
 mock
 pre-commit
 pytest
