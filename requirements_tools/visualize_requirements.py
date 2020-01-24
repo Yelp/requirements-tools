@@ -31,7 +31,10 @@ def get_raw_requirements(requirements_file):
     )
 
 
-def print_req(req, depth, seen=()):
+def print_req(req, depth, max_depth, seen=()):
+    if max_depth >= 0 and depth > max_depth:
+        return
+
     if req.key in seen:
         circular = ' (circular: {})'.format(
             '->'.join(seen[seen.index(req.key):] + (req.key,)),
@@ -63,17 +66,28 @@ def print_req(req, depth, seen=()):
         return
 
     for sub_requirement in reqs[req.key].requires(req.extras):
-        print_req(sub_requirement, depth + 1, seen=seen + (req.key,))
+        print_req(
+            sub_requirement,
+            depth + 1,
+            max_depth,
+            seen=seen + (req.key,),
+        )
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('requirements_file')
+    parser.add_argument(
+        '--max-depth',
+        type=int,
+        default=-1,
+        help='max dependency depth to print (inclusive)',
+    )
     args = parser.parse_args()
 
     raw_requirements = get_raw_requirements(args.requirements_file)
     for requirement in raw_requirements:
-        print_req(requirement, 0)
+        print_req(requirement, 0, args.max_depth)
 
 
 if __name__ == '__main__':
