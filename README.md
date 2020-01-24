@@ -133,6 +133,11 @@ it).
 
 To use it, just call `visualize-requirements requirements.txt`.
 
+You may find that your application has a large dependency tree so that the
+default output becomes hard to read. You can specify a `--max-depth` option
+so that the output is easier to read:
+`visualize-requirements --max-depth 1 requirements.txt`.
+
 ## check-all-wheels
 
 This tool checks whether all of your dependencies are pre-wheeled on the
