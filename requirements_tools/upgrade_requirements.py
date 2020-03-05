@@ -112,8 +112,9 @@ def make_virtualenv(args):
 
         # Latest pip installs python3.5 wheels
         pip_install(
-            (pip,), '--upgrade', 'setuptools', 'pip', args.install_deps,
+            (pip,), '--upgrade', 'setuptools', 'pip',
         )
+        pip_install((pip,), args.install_deps)
         pip_install(pip_tool, '-r', 'requirements-minimal.txt')
         pip_install(pip_tool, '-r', 'requirements-dev-minimal.txt')
 
