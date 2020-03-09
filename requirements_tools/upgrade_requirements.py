@@ -126,7 +126,7 @@ def make_virtualenv(args):
             '--exec-count', str(args.exec_count),
             '--exec-limit', str(args.exec_limit),
             '--pip-tool', args.pip_tool,
-            '--install-deps', args.install_deps,
+            '--install-deps={}'.format(args.install_deps),
             reason='to use the virtualenv python',
         )
 
