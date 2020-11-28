@@ -184,10 +184,16 @@ def main():
                 reason='Unmet dependencies',
             )
 
+        def _file_contents(reqs):
+            if not reqs:
+                return ''
+            else:
+                return '\n'.join(reqs) + '\n'
+
         with open('requirements.txt', 'w') as f:
-            f.write('\n'.join(reqs) + '\n')
+            f.write(_file_contents(reqs))
         with open('requirements-dev.txt', 'w') as f:
-            f.write('\n'.join(reqs_dev - reqs) + '\n')
+            f.write(_file_contents(reqs_dev - reqs))
 
         with open(os.devnull, 'w') as devnull:
             subprocess.check_call(
