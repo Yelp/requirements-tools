@@ -6,13 +6,13 @@ from setuptools import setup
 setup(
     name='requirements-tools',
     description='Scripts for working with Python requirements.',
-    version='1.2.4',
+    version='1.2.5',
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
     install_requires=['pytest', 'virtualenv'],
     packages=find_packages(exclude=('tests*',)),

@@ -1,7 +1,8 @@
 -e .
 # Triggers WEBCORE-3776
 chameleon==2.13.post1
-coverage
+# Remove constraint once off python 3.6.0 on xenial
+coverage<5
 mock
 pre-commit
 pytest
