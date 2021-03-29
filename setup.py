@@ -6,7 +6,7 @@ from setuptools import setup
 setup(
     name='requirements-tools',
     description='Scripts for working with Python requirements.',
-    version='1.2.5',
+    version='2.0.0',
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
