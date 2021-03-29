@@ -108,7 +108,10 @@ def make_virtualenv(args):
         )
 
         def pip_install(pip, *argv):
-            print_call(*(pip + ('install', '-i', args.index_url) + argv))
+            install = ('install',)
+            if args.index_url:
+                install = ('install', '-i', args.index_url)
+            print_call(*(pip + install + argv))
 
         # Latest pip installs python3.5 wheels
         pip_install(
@@ -118,17 +121,20 @@ def make_virtualenv(args):
         pip_install(pip_tool, '-r', 'requirements-minimal.txt')
         pip_install(pip_tool, '-r', 'requirements-dev-minimal.txt')
 
-        reexec(
+        reexec_args = [
             python, __file__.rstrip('c'),
             '--tempdir', tempdir,
             # Pass along existing args
-            '--index-url', args.index_url,
             '--exec-count', str(args.exec_count),
             '--exec-limit', str(args.exec_limit),
             '--pip-tool', args.pip_tool,
             '--install-deps={}'.format(args.install_deps),
-            reason='to use the virtualenv python',
-        )
+        ]
+
+        if args.index_url:
+            reexec_args.extend(('--index-url', args.index_url))
+
+        reexec(*reexec_args, reason='to use the virtualenv python')
 
 
 def main():
@@ -137,9 +143,7 @@ def main():
         '-p', '--python',
         default='python' + '.'.join(str(x) for x in sys.version_info[:2]),
     )
-    parser.add_argument(
-        '-i', '--index-url', default='https://pypi.python.org/simple',
-    )
+    parser.add_argument('-i', '--index-url')
     parser.add_argument(
         '--exec-limit', type=int, default=10, help=argparse.SUPPRESS,
     )
@@ -171,18 +175,24 @@ def main():
             if new_exec_count > args.exec_limit:
                 raise AssertionError('--exec-limit depth limit exceeded')
             unmet, = e.args
-            print_call(
-                *(pip_tool + ('install', '-i', args.index_url) + tuple(unmet))
-            )
-            reexec(
+
+            install = ('install',)
+            if args.index_url:
+                install = ('install', '-i', args.index_url)
+            print_call(*(pip_tool + install + tuple(unmet)))
+
+            reexec_args = [
                 python, __file__.rstrip('c'),
                 '--exec-count', str(new_exec_count),
                 # Pass along existing args
-                '--index-url', args.index_url,
                 '--tempdir', args.tempdir,
                 '--exec-limit', str(args.exec_limit),
-                reason='Unmet dependencies',
-            )
+            ]
+
+            if args.index_url:
+                reexec_args.extend(('--index-url', args.index_url))
+
+            reexec(*reexec_args, reason='Unmet dependencies')
 
         def _file_contents(reqs):
             if not reqs:

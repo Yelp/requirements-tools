@@ -16,9 +16,7 @@ DISTS_DIR = 'downloaded_dists'
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-i', '--index-url', default='https://pypi.python.org/simple',
-    )
+    parser.add_argument('-i', '--index-url')
     parser.add_argument('--pip-tool', default='pip')
     parser.add_argument('--install-deps', default='pip')
     args = parser.parse_args()
@@ -31,12 +29,22 @@ def main():
     os.makedirs(DISTS_DIR)
 
     silent('pip', 'install', 'pip', '--upgrade')
-    silent('pip', 'install', '-i', args.index_url, args.install_deps)
+
+    if args.index_url:
+        silent('pip', 'install', '-i', args.index_url, args.install_deps)
+    else:
+        silent('pip', 'install', args.install_deps)
+
     cmd = tuple(shlex.split(args.pip_tool)) + (
-        'download', '--dest', DISTS_DIR,
-        '-r', 'requirements.txt', '-r', 'requirements-dev.txt',
-        '-i', args.index_url,
+        'download',
+        '--dest', DISTS_DIR,
+        '-r', 'requirements.txt',
+        '-r', 'requirements-dev.txt',
     )
+
+    if args.index_url:
+        cmd = cmd + ('-i', args.index_url)
+
     silent(*cmd)
 
     ret = 0
