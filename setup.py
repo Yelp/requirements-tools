@@ -14,7 +14,14 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
     ],
-    install_requires=['pytest', 'virtualenv'],
+    install_requires=[
+        'pytest',
+        # RequirementParseError got refactored in v49
+        # (https://github.com/pypa/setuptools/blob/main/CHANGES.rst#changes-20])
+        # and doesn't appear to be entirely backwards compatible.
+        'setuptools>18.5,<49',
+        'virtualenv',
+    ],
     packages=find_packages(exclude=('tests*',)),
     entry_points={
         'console_scripts': [
