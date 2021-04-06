@@ -14,7 +14,10 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
     ],
-    install_requires=['pytest', 'virtualenv'],
+    install_requires=[
+        'pytest',
+        'virtualenv',
+    ],
     packages=find_packages(exclude=('tests*',)),
     entry_points={
         'console_scripts': [
