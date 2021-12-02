@@ -110,7 +110,9 @@ def make_virtualenv(args):
         def pip_install(pip, *argv):
             install = ('install',)
             if args.index_url:
-                install = ('install', '-i', args.index_url)
+                install += ('-i', args.index_url)
+            if args.extra_index_url:
+                install += ('--extra-index-url', args.extra_index_url)
             print_call(*(pip + install + argv))
 
         # Latest pip installs python3.5 wheels
@@ -133,6 +135,8 @@ def make_virtualenv(args):
 
         if args.index_url:
             reexec_args.extend(('--index-url', args.index_url))
+        if args.extra_index_url:
+            reexec_args.extend(('--extra-index-url', args.extra_index_url))
 
         reexec(*reexec_args, reason='to use the virtualenv python')
 
@@ -144,6 +148,7 @@ def main():
         default='python' + '.'.join(str(x) for x in sys.version_info[:2]),
     )
     parser.add_argument('-i', '--index-url')
+    parser.add_argument('--extra-index-url')
     parser.add_argument(
         '--exec-limit', type=int, default=10, help=argparse.SUPPRESS,
     )

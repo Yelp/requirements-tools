@@ -17,6 +17,7 @@ DISTS_DIR = 'downloaded_dists'
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--index-url')
+    parser.add_argument('--extra-index-url')
     parser.add_argument('--pip-tool', default='pip')
     parser.add_argument('--install-deps', default='pip')
     args = parser.parse_args()
@@ -30,10 +31,12 @@ def main():
 
     silent('pip', 'install', 'pip', '--upgrade')
 
+    cmd = ('pip', 'install', args.install_deps)
     if args.index_url:
-        silent('pip', 'install', '-i', args.index_url, args.install_deps)
-    else:
-        silent('pip', 'install', args.install_deps)
+        cmd += ('-i', args.index_url)
+    if args.extra_index_url:
+        cmd += ('--extra-index-url', args.extra_index_url)
+    silent(*cmd)
 
     cmd = tuple(shlex.split(args.pip_tool)) + (
         'download',
@@ -44,6 +47,8 @@ def main():
 
     if args.index_url:
         cmd = cmd + ('-i', args.index_url)
+    if args.extra_index_url:
+        cmd = cmd + ('--extra-index-url', args.extra_index_url)
 
     silent(*cmd)
 
