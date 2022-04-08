@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import pkg_resources
 import pytest
+import six
 
 from requirements_tools import check_requirements as main
 
@@ -75,6 +76,30 @@ def test_get_raw_requirements_disallows_urls(tmpdir, contents):
         ' - transitive dependencies from urls are not traceable\n'
         " - line of error: {}\n".format(contents),
     )
+
+
+REQUIREMENTS_WITH_MARKERS = """
+foo==1; python_version < "3"
+foo==2; python_version >= "3"
+"""
+
+
+def test_get_raw_requirements_filter_by_environment_marker(tmpdir):
+    reqs_file = tmpdir.join('requirements.txt')
+    reqs_file.write(REQUIREMENTS_WITH_MARKERS)
+    requirements = main.get_raw_requirements(reqs_file.strpath)
+    if six.PY2:
+        assert requirements == [
+            (
+                pkg_resources.Requirement.parse('foo==1'), reqs_file.strpath,
+            ),
+        ]
+    else:
+        assert requirements == [
+            (
+                pkg_resources.Requirement.parse('foo==2'), reqs_file.strpath,
+            ),
+        ]
 
 
 def test_to_version():

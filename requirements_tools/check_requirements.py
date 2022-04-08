@@ -20,6 +20,10 @@ REQUIREMENTS_FILES = frozenset(('requirements.txt', 'requirements-dev.txt'))
 
 
 def parse_requirement(req):
+    """
+    Parses requirement specifier, normalizing any versions and stripping
+    environment metadata for ease of comparison.
+    """
     dumb_parse = pkg_resources.Requirement.parse(req)
     if dumb_parse.extras:
         extras = '[{}]'.format(','.join(dumb_parse.extras))
@@ -42,12 +46,31 @@ def get_lines_from_file(filename):
 
 
 def get_raw_requirements(filename):
+    """
+    Get a list of Requirement objects from file.
+
+    Requirements will have normalized version numbers. Environment markers will
+    be used to filter out packages which are not installed in the environment
+    check-requirements is currently running in. For ease of comparison, the
+    markers are stripped before
+    """
     ret = []
     for line in get_lines_from_file(filename):
         # allow something to editably install itself
         if line.strip() == '-e .':
             continue
         try:
+            # this parses the environment marker, but doesn't normalize the
+            # version, hence why we reparse with our custom function below
+            raw_requirement = pkg_resources.Requirement.parse(line)
+            # skip this requirement if it isn't supposed to be installed in
+            # this environment
+            if (
+                raw_requirement.marker
+                and not raw_requirement.marker.evaluate()
+            ):
+                continue
+
             ret.append((parse_requirement(line), filename))
         except pkg_resources.RequirementParseError as e:
             raise AssertionError(

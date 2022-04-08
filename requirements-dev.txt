@@ -8,5 +8,6 @@ pre-commit
 pytest
 # Triggers WEBCORE-3023
 setuptools>=18.5
+six
 # A circular dependency
 sphinx==1.3.6
