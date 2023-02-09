@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import argparse
-import io
 import sys
 
 import pkg_resources
@@ -15,7 +11,7 @@ reqs = {pkg.key: pkg for pkg in pkg_resources.working_set}
 
 def get_lines_from_file(filename):
     """Returns the non-blank, non-comment lines from a requirements file."""
-    with io.open(filename, encoding='UTF-8') as requirements_file:
+    with open(filename, encoding='UTF-8') as requirements_file:
         return [
             line.strip() for line in requirements_file
             if line.strip() and not line.startswith('#')

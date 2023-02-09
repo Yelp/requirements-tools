@@ -1,8 +1,3 @@
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
-import io
 import itertools
 import os.path
 import sys
@@ -38,7 +33,7 @@ def parse_requirement(req):
 
 
 def get_lines_from_file(filename):
-    with io.open(filename) as requirements_file:
+    with open(filename) as requirements_file:
         return [
             line.strip() for line in requirements_file
             if line.strip() and not line.startswith('#')
@@ -96,7 +91,7 @@ def to_version(requirement):
 
 
 def to_equality_str(requirement):
-    return '{}=={}'.format(requirement.key, to_version(requirement))
+    return f'{requirement.key}=={to_version(requirement)}'
 
 
 def to_pinned_versions(requirements):
@@ -137,7 +132,7 @@ def format_unpinned_requirements(unpinned_requirements):
             package,
             requirement,
             filename,
-            '{}=={}'.format(package, installed_things[package].version),
+            f'{package}=={installed_things[package].version}',
         )
         for package, requirement, filename in sorted(
             unpinned_requirements,
@@ -205,7 +200,7 @@ def _check_requirements_integrity_impl():
             )
         installed_version = to_version(
             parse_requirement(
-                '{}=={}'.format(req.key, installed_things[req.key].version),
+                f'{req.key}=={installed_things[req.key].version}',
             ),
         )
         if installed_version != version:
@@ -300,14 +295,14 @@ def get_pinned_versions_from_requirement(requirement):
                     ),
                 )
             expected_pinned.add(
-                '{}=={}'.format(installed.key, installed.version),
+                f'{installed.key}=={installed.version}',
             )
     return expected_pinned
 
 
 def format_versions_on_lines_with_dashes(versions):
     return '\n'.join(
-        '\t- {}'.format(req)
+        f'\t- {req}'
         for req in sorted(versions, key=attrgetter('key'))
     )
 
@@ -321,7 +316,7 @@ def _expected_pinned(filename, pin_filename):
                 'Is it missing from {}?\n'
                 '\t- {}\n'.format(filename, pin_filename, req.key),
             )
-        ret.add('{}=={}'.format(req.key, installed_things[req.key].version))
+        ret.add(f'{req.key}=={installed_things[req.key].version}')
         ret |= get_pinned_versions_from_requirement(req)
     return ret
 
@@ -441,7 +436,7 @@ def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
 
 def bold(text):  # pragma: no cover
     if sys.stderr.isatty():
-        return '\033[1m{}\033[0m'.format(text)
+        return f'\033[1m{text}\033[0m'
     else:
         return text
 

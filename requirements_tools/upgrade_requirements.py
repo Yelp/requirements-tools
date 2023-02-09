@@ -2,7 +2,6 @@
 import argparse
 import contextlib
 import os
-import pipes
 import shlex
 import shutil
 import subprocess
@@ -28,7 +27,7 @@ def color(s, color):
 
 
 def fmt_cmd(cmd):
-    ret = '>>> {}'.format(' '.join(pipes.quote(x) for x in cmd))
+    ret = '>>> {}'.format(' '.join(shlex.quote(x) for x in cmd))
     return color(ret, '\033[32m')
 
 
@@ -40,7 +39,7 @@ def print_call(*cmd, **kwargs):
 def reexec(*cmd, **kwargs):
     reason = kwargs.pop('reason')
     assert not kwargs, kwargs
-    print(color('*** exec-ing: {}'.format(reason), '\033[33m'))
+    print(color(f'*** exec-ing: {reason}', '\033[33m'))
     print(fmt_cmd(cmd))
     # Never returns
     os.execv(cmd[0], cmd)
@@ -63,12 +62,12 @@ def installed(requirements_file):
         req = requirements_to_parse.pop()
         installed_req = installed_things[req.key]
         expected_pinned.add(
-            '{}=={}'.format(installed_req.project_name, installed_req.version),
+            f'{installed_req.project_name}=={installed_req.version}',
         )
         for sub in installed_req.requires(req.extras):
             if sub.key not in installed_things:
                 specifiers = ','.join(str(s) for s in sub.specifier)
-                unmet.add('{}{}'.format(sub.key, specifiers))
+                unmet.add(f'{sub.key}{specifiers}')
             elif (sub.key, sub.extras) not in already_parsed:
                 requirements_to_parse.append(sub)
                 already_parsed.add((sub.key, sub.extras))
@@ -128,7 +127,7 @@ def make_virtualenv(args):
             '--exec-count', str(args.exec_count),
             '--exec-limit', str(args.exec_limit),
             '--pip-tool', args.pip_tool,
-            '--install-deps={}'.format(args.install_deps),
+            f'--install-deps={args.install_deps}',
         ]
 
         if args.index_url:
