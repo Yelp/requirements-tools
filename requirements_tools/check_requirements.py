@@ -72,7 +72,7 @@ def get_raw_requirements(filename):
                 continue
 
             ret.append((parse_requirement(line), filename))
-        except pkg_resources.RequirementParseError as e:
+        except ValueError as e:
             raise AssertionError(
                 'Requirements must be <<pkg>> or <<pkg>>==<<version>>\n'
                 ' - git / http / etc. urls may be mutable (unpinnable)\n'
