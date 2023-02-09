@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import annotations
+
 import argparse
 import os
 import shlex
@@ -6,7 +8,7 @@ import shutil
 import subprocess
 
 
-def silent(*cmd):
+def silent(*cmd: str) -> None:
     with open(os.devnull, 'w') as devnull:
         subprocess.check_call(cmd, stdout=devnull)
 
@@ -14,7 +16,7 @@ def silent(*cmd):
 DISTS_DIR = 'downloaded_dists'
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--index-url')
     parser.add_argument('--pip-tool', default='pip')

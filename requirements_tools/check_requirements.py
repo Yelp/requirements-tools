@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import itertools
 import os.path
 import sys
 from operator import attrgetter
+from typing import Iterable
 
 import pkg_resources
 import pytest
+from pkg_resources import Requirement
 
 
 installed_things = {
@@ -14,17 +18,17 @@ installed_things = {
 REQUIREMENTS_FILES = frozenset(('requirements.txt', 'requirements-dev.txt'))
 
 
-def parse_requirement(req):
+def parse_requirement(req: str) -> Requirement:
     """
     Parses requirement specifier, normalizing any versions and stripping
     environment metadata for ease of comparison.
     """
-    dumb_parse = pkg_resources.Requirement.parse(req)
+    dumb_parse = Requirement.parse(req)
     if dumb_parse.extras:
         extras = '[{}]'.format(','.join(dumb_parse.extras))
     else:
         extras = ''
-    return pkg_resources.Requirement.parse(
+    return Requirement.parse(
         dumb_parse.project_name + extras + ','.join(
             operator + pkg_resources.safe_version(version)
             for operator, version in dumb_parse.specs
@@ -32,7 +36,7 @@ def parse_requirement(req):
     )
 
 
-def get_lines_from_file(filename):
+def get_lines_from_file(filename: str) -> list[str]:
     with open(filename) as requirements_file:
         return [
             line.strip() for line in requirements_file
@@ -40,7 +44,7 @@ def get_lines_from_file(filename):
         ]
 
 
-def get_raw_requirements(filename):
+def get_raw_requirements(filename: str) -> list[tuple[Requirement, str]]:
     """
     Get a list of Requirement objects from file.
 
@@ -57,7 +61,7 @@ def get_raw_requirements(filename):
         try:
             # this parses the environment marker, but doesn't normalize the
             # version, hence why we reparse with our custom function below
-            raw_requirement = pkg_resources.Requirement.parse(line)
+            raw_requirement = Requirement.parse(line)
             # skip this requirement if it isn't supposed to be installed in
             # this environment
             if (
@@ -78,27 +82,31 @@ def get_raw_requirements(filename):
     return ret
 
 
-def to_version(requirement):
+def to_version(requirement: Requirement) -> str | None:
     """Given a requirement spec, return the pinned version.
 
     Returns None if no single version is pinned.
     """
     if len(requirement.specs) != 1:
-        return
+        return None
     if requirement.specs[0][0] != '==':
-        return
+        return None
     return requirement.specs[0][1]
 
 
-def to_equality_str(requirement):
+def to_equality_str(requirement: Requirement) -> str:
     return f'{requirement.key}=={to_version(requirement)}'
 
 
-def to_pinned_versions(requirements):
+def to_pinned_versions(
+        requirements: Iterable[tuple[Requirement, str]],
+) -> dict[str, str | None]:
     return {req.key: to_version(req) for req, _ in requirements}
 
 
-def find_unpinned_requirements(requirements):
+def find_unpinned_requirements(
+        requirements: Iterable[tuple[Requirement, str]],
+) -> set[tuple[str, Requirement, str]]:
     """
     :param requirements: list of (requirement, filename)
     :return: Unpinned packages: list of
@@ -126,7 +134,9 @@ def find_unpinned_requirements(requirements):
     return unpinned
 
 
-def format_unpinned_requirements(unpinned_requirements):
+def format_unpinned_requirements(
+        unpinned_requirements: set[tuple[str, Requirement, str]],
+) -> str:
     return '\t' + '\n\t'.join(
         '{} (required by {} in {})\n\t\tmaybe you want "{}"?'.format(
             package,
@@ -141,7 +151,7 @@ def format_unpinned_requirements(unpinned_requirements):
     )
 
 
-def _check_requirements_is_only_for_applications_impl():
+def _check_requirements_is_only_for_applications_impl() -> None:
     if not os.path.exists('requirements.txt'):
         raise AssertionError(
             'check-requirements is designed specifically with applications '
@@ -149,15 +159,19 @@ def _check_requirements_is_only_for_applications_impl():
             "Either remove check-requirements (if you're a library) or "
             '`touch requirements.txt`.',
         )
+    else:
+        return None
 
 
 @pytest.fixture(autouse=True, scope='session')
-def check_requirements_is_only_for_applications():  # pragma: no cover
+def check_requirements_is_only_for_applications() -> None:  # pragma: no cover
     """separated as fixtures are not callable in pytest 4+"""
     _check_requirements_is_only_for_applications_impl()
 
 
-def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
+def _get_all_raw_requirements(
+        requirements_files: frozenset[str] = REQUIREMENTS_FILES,
+) -> list[tuple[Requirement, str]] | None:
     # for compatibility with repos that haven't started using
     # requirements-dev-minimal.txt, we don't want to force pinning
     # requirements-dev.txt until they use minimal
@@ -168,8 +182,7 @@ def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
             not os.path.exists(reqfile)
             for reqfile in requirements_files
     ):  # pragma: no cover
-        return
-
+        return None
     return list(
         itertools.chain.from_iterable([
             get_raw_requirements(reqfile)
@@ -179,7 +192,7 @@ def _get_all_raw_requirements(requirements_files=REQUIREMENTS_FILES):
     )
 
 
-def _check_requirements_integrity_impl():
+def _check_requirements_integrity_impl() -> None:
     raw_requirements = _get_all_raw_requirements()
     if not raw_requirements:
         raise AssertionError(
@@ -220,12 +233,12 @@ def _check_requirements_integrity_impl():
 
 
 @pytest.fixture(autouse=True, scope='session')
-def check_requirements_integrity():  # pragma: no cover
+def check_requirements_integrity() -> None:  # pragma: no cover
     """separated as fixtures are not callable in pytest 4+"""
     _check_requirements_integrity_impl()
 
 
-def test_no_duplicate_requirements():
+def test_no_duplicate_requirements() -> None:
     duplicates = []
     for filename in (
         'requirements-minimal.txt',
@@ -254,11 +267,12 @@ def test_no_duplicate_requirements():
         )
 
 
-def test_requirements_pinned():
+def test_requirements_pinned() -> None:
     raw_requirements = _get_all_raw_requirements()
     if raw_requirements is None:  # pragma: no cover
         pytest.skip('No requirements files found')
 
+    assert raw_requirements is not None
     unpinned_requirements = find_unpinned_requirements(raw_requirements)
     if unpinned_requirements:
         raise AssertionError(
@@ -268,7 +282,9 @@ def test_requirements_pinned():
         )
 
 
-def get_pinned_versions_from_requirement(requirement):
+def get_pinned_versions_from_requirement(
+        requirement: Requirement,
+) -> set[str]:
     expected_pinned = set()
     requirements_to_parse = [requirement]
     already_parsed = {(requirement.key, requirement.extras)}
@@ -300,14 +316,16 @@ def get_pinned_versions_from_requirement(requirement):
     return expected_pinned
 
 
-def format_versions_on_lines_with_dashes(versions):
+def format_versions_on_lines_with_dashes(
+    versions: Iterable[Requirement],
+) -> str:
     return '\n'.join(
         f'\t- {req}'
         for req in sorted(versions, key=attrgetter('key'))
     )
 
 
-def _expected_pinned(filename, pin_filename):
+def _expected_pinned(filename: str, pin_filename: str) -> set[str]:
     ret = set()
     for req, _ in get_raw_requirements(filename):
         if req.key not in installed_things:
@@ -321,7 +339,7 @@ def _expected_pinned(filename, pin_filename):
     return ret
 
 
-def test_top_level_dependencies():
+def test_top_level_dependencies() -> None:
     """Test that top-level requirements (reqs-minimal and reqs-dev-minimal)
     are consistent with the pinned requirements.
     """
@@ -371,8 +389,8 @@ def test_top_level_dependencies():
             '\033[0m',
         )
 
-    for expected_pinned, pin_filename, minimal_filename in environments:
-        expected_pinned = {parse_requirement(s) for s in expected_pinned}
+    for expected_pinned_str, pin_filename, minimal_filename in environments:
+        expected_pinned = {parse_requirement(s) for s in expected_pinned_str}
         if os.path.exists(pin_filename):
             requirements = {
                 req for req, _ in get_raw_requirements(pin_filename)
@@ -414,7 +432,9 @@ def test_top_level_dependencies():
             )
 
 
-def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
+def test_no_underscores_all_dashes(
+    requirements_files: Iterable[str] = REQUIREMENTS_FILES,
+) -> None:
     if all(
             not os.path.exists(reqfile)
             for reqfile in requirements_files
@@ -434,14 +454,14 @@ def test_no_underscores_all_dashes(requirements_files=REQUIREMENTS_FILES):
                 )
 
 
-def bold(text):  # pragma: no cover
+def bold(text: str) -> str:  # pragma: no cover
     if sys.stderr.isatty():
         return f'\033[1m{text}\033[0m'
     else:
         return text
 
 
-def main():  # pragma: no cover
+def main() -> int:  # pragma: no cover
     print('Checking requirements...')
     # Forces quiet output and overrides pytest.ini
     os.environ['PYTEST_ADDOPTS'] = '-q -s --tb=short'

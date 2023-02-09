@@ -482,8 +482,8 @@ def test_get_pinned_versions_from_requirement(requirement, expected_pkgs):
     )
     # These are to make this not flaky in future when things change
     assert isinstance(result, set)
-    result = sorted(result)
-    split = [req.split('==') for req in result]
+    result_list = sorted(result)
+    split = [req.split('==') for req in result_list]
     packages = [package for package, _ in split]
     assert packages == expected_pkgs
 

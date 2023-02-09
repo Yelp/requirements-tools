@@ -1,15 +1,19 @@
 #!/usr/bin/env python
+from __future__ import annotations
+
 import argparse
 import sys
+from typing import Generator
 
 import pkg_resources
+from pkg_resources import Requirement
 
 
 color = sys.stdout.isatty()
 reqs = {pkg.key: pkg for pkg in pkg_resources.working_set}
 
 
-def get_lines_from_file(filename):
+def get_lines_from_file(filename: str) -> list[str]:
     """Returns the non-blank, non-comment lines from a requirements file."""
     with open(filename, encoding='UTF-8') as requirements_file:
         return [
@@ -18,7 +22,9 @@ def get_lines_from_file(filename):
         ]
 
 
-def get_raw_requirements(requirements_file):
+def get_raw_requirements(
+        requirements_file: str,
+) -> Generator[Requirement, None, None]:
     """Get requirements from a requirements.txt file.  -r is not supported"""
     unparsed_requirements_lines = get_lines_from_file(requirements_file)
 
@@ -27,7 +33,11 @@ def get_raw_requirements(requirements_file):
     )
 
 
-def print_req(req, depth, seen=()):
+def print_req(
+        req: Requirement,
+        depth: int,
+        seen: tuple[str, ...] = (),
+) -> None:
     if req.key in seen:
         circular = ' (circular: {})'.format(
             '->'.join(seen[seen.index(req.key):] + (req.key,)),
@@ -62,7 +72,7 @@ def print_req(req, depth, seen=()):
         print_req(sub_requirement, depth + 1, seen=seen + (req.key,))
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('requirements_file')
     args = parser.parse_args()
@@ -70,6 +80,7 @@ def main():
     raw_requirements = get_raw_requirements(args.requirements_file)
     for requirement in raw_requirements:
         print_req(requirement, 0)
+    return 0
 
 
 if __name__ == '__main__':
