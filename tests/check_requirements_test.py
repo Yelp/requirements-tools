@@ -1,9 +1,5 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import pkg_resources
 import pytest
-import six
 
 from requirements_tools import check_requirements as main
 
@@ -88,18 +84,11 @@ def test_get_raw_requirements_filter_by_environment_marker(tmpdir):
     reqs_file = tmpdir.join('requirements.txt')
     reqs_file.write(REQUIREMENTS_WITH_MARKERS)
     requirements = main.get_raw_requirements(reqs_file.strpath)
-    if six.PY2:
-        assert requirements == [
-            (
-                pkg_resources.Requirement.parse('foo==1'), reqs_file.strpath,
-            ),
-        ]
-    else:
-        assert requirements == [
-            (
-                pkg_resources.Requirement.parse('foo==2'), reqs_file.strpath,
-            ),
-        ]
+    assert requirements == [
+        (
+            pkg_resources.Requirement.parse('foo==2'), reqs_file.strpath,
+        ),
+    ]
 
 
 def test_to_version():
@@ -262,7 +251,7 @@ def test_test_top_level_dependencies_unmet_dependency(in_tmpdir):
 def test_prerelease_name_normalization(in_tmpdir, version):
     in_tmpdir.join('requirements-minimal.txt').write('prerelease-pkg')
     in_tmpdir.join('requirements.txt').write(
-        'prerelease-pkg=={}'.format(version),
+        f'prerelease-pkg=={version}',
     )
     main.test_top_level_dependencies()
 
@@ -493,8 +482,8 @@ def test_get_pinned_versions_from_requirement(requirement, expected_pkgs):
     )
     # These are to make this not flaky in future when things change
     assert isinstance(result, set)
-    result = sorted(result)
-    split = [req.split('==') for req in result]
+    result_list = sorted(result)
+    split = [req.split('==') for req in result_list]
     packages = [package for package, _ in split]
     assert packages == expected_pkgs
 
@@ -546,7 +535,7 @@ def test_test_no_underscores_all_dashes_error(in_tmpdir):
             requirements_files=(tmpfile.strpath,),
         )
     assert excinfo.value.args == (
-        'Use dashes for package names {}: foo_bar==1'.format(tmpfile.strpath),
+        f'Use dashes for package names {tmpfile.strpath}: foo_bar==1',
     )
 
 
@@ -606,7 +595,7 @@ def test_check_requirements_integrity_failing(in_tmpdir):
 
 @pytest.mark.parametrize('version', ('2.13-1', '2.13.post1'))
 def test_check_requirements_integrity_post_version(in_tmpdir, version):
-    in_tmpdir.join('requirements.txt').write('chameleon=={}'.format(version))
+    in_tmpdir.join('requirements.txt').write(f'chameleon=={version}')
     main._check_requirements_integrity_impl()
 
 
